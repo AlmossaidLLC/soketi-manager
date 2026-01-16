@@ -1,0 +1,42 @@
+# Dependencies
+node_modules
+npm-debug.log
+npm-error.log
+
+# Environment files
+.env
+.env.*
+
+# Git files
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+*.md
+
+# IDE files
+.DS_Store
+.vscode
+.idea
+
+# Logs
+*.log
+
+# Test/dev files (not needed in production)
+*.test.js
+*.spec.js
+receiver.html
+
+# Docker files (not needed in image)
+docker-compose*.yml
+Dockerfile*
+.dockerignore
+
+# Runtime files
+.soketi.pid
+*.pid
+
+# Test coverage
+coverage
+.nyc_output

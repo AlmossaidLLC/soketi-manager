@@ -1,0 +1,26 @@
+{
+  "name": "socket-test",
+  "version": "1.0.0",
+  "description": "Simple HTML pages to send and receive messages via Soketi WebSocket.",
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "listner.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "manager": "node src/index.js",
+    "start:manager": "node src/index.js"
+  },
+  "dependencies": {
+    "@soketi/soketi": "^1.4.16",
+    "dotenv": "^16.4.5",
+    "express": "5.2.1",
+    "pusher": "^5.2.0",
+    "pusher-js": "^8.4.0"
+  },
+  "devDependencies": {
+    "autoprefixer": "10.4.23",
+    "postcss": "8.5.6",
+    "tailwindcss": "4.1.18"
+  }
+}

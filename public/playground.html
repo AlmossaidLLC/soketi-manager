@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soketi Playground - Test Your Apps</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://js.pusher.com/8.4.0/pusher.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        border: "hsl(217.2 32.6% 17.5%)",
+                        input: "hsl(217.2 32.6% 17.5%)",
+                        ring: "hsl(212.7 26.8% 83.9%)",
+                        background: "hsl(222.2 84% 4.9%)",
+                        foreground: "hsl(210 40% 98%)",
+                        primary: {
+                            DEFAULT: "hsl(210 40% 98%)",
+                            foreground: "hsl(222.2 47.4% 11.2%)",
+                        },
+                        secondary: {
+                            DEFAULT: "hsl(217.2 32.6% 17.5%)",
+                            foreground: "hsl(210 40% 98%)",
+                        },
+                        destructive: {
+                            DEFAULT: "hsl(0 62.8% 30.6%)",
+                            foreground: "hsl(210 40% 98%)",
+                        },
+                        muted: {
+                            DEFAULT: "hsl(217.2 32.6% 17.5%)",
+                            foreground: "hsl(215 20.2% 65.1%)",
+                        },
+                        accent: {
+                            DEFAULT: "hsl(217.2 32.6% 17.5%)",
+                            foreground: "hsl(210 40% 98%)",
+                        },
+                        card: {
+                            DEFAULT: "hsl(222.2 47.4% 11.2%)",
+                            foreground: "hsl(210 40% 98%)",
+                        },
+                    },
+                    borderRadius: {
+                        lg: "0.5rem",
+                        md: "calc(0.5rem - 2px)",
+                        sm: "calc(0.5rem - 4px)",
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        @layer base {
+            * {
+                @apply border-border;
+            }
+            body {
+                @apply bg-background text-foreground;
+            }
+        }
+        .status-indicator {
+            @apply inline-block w-2 h-2 rounded-full mr-2;
+        }
+        .status-connected {
+            @apply bg-green-400;
+            box-shadow: 0 0 8px rgba(74, 222, 128, 0.6);
+        }
+        .status-disconnected {
+            @apply bg-red-400;
+        }
+        .status-connecting {
+            @apply bg-yellow-400;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-background antialiased">
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <!-- Header -->
+        <header class="bg-card border border-border rounded-lg p-6 mb-6 shadow-lg">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h1 class="text-3xl font-bold text-foreground mb-2">🧪 Soketi Playground</h1>
+                    <p class="text-muted-foreground">Test your Soketi apps - Send and receive events in real-time</p>
+                </div>
+                <a 
+                    href="/" 
+                    class="px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 transition-colors font-medium text-sm inline-block"
+                >
+                    ← Back to Manager
+                </a>
+            </div>
+        </header>
+
+        <!-- Alert Container -->
+        <div id="alert-container" class="mb-6"></div>
+
+        <!-- App Configuration -->
+        <div class="bg-card border border-border rounded-lg p-6 mb-6 shadow-lg">
+            <h2 class="text-xl font-semibold text-foreground mb-4">App Configuration</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-foreground mb-2">App ID</label>
+                    <select 
+                        id="appSelect"
+                        class="w-full px-3 py-2 bg-background border border-input rounded-md text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                        onchange="loadAppConfig()"
+                    >
+                        <option value="">Select an app...</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-foreground mb-2">App Key</label>
+                    <input 
+                        type="text" 
+                        id="appKey"
+                        placeholder="app-key"
+                        class="w-full px-3 py-2 bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    >
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-foreground mb-2">App Secret</label>
+                    <div class="relative">
+                        <input 
+                            type="password" 
+                            id="appSecret"
+                            placeholder="app-secret"
+                            class="w-full px-3 py-2 pr-10 bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                        >
+                        <button 
+                            type="button" 
+                            onclick="toggleSecretInput()" 
+                            class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        >
+                            👁️
+                        </button>
+                    </div>
+                </div>
+                <div class="flex items-end">
+                    <button 
+                        type="button"
+                        onclick="connectListener()"
+                        class="w-full px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium"
+                    >
+                        Connect Listener
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Two Column Layout -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Send Section -->
+            <div class="bg-card border border-border rounded-lg p-6 shadow-lg">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-semibold text-foreground">📤 Send Event</h2>
+                    <span id="sendStatus" class="flex items-center text-sm text-muted-foreground">
+                        <span class="status-indicator status-disconnected"></span>
+                        Ready
+                    </span>
+                </div>
+                
+                <form id="sendForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-foreground mb-2">Channel Name</label>
+                        <input 
+                            type="text" 
+                            id="sendChannel"
+                            value="test-channel"
+                            required
+                            class="w-full px-3 py-2 bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                            placeholder="channel-name"
+                        >
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-foreground mb-2">Event Name</label>
+                        <input 
+                            type="text" 
+                            id="sendEvent"
+                            value="test-event"
+                            required
+                            class="w-full px-3 py-2 bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                            placeholder="event-name"
+                        >
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-foreground mb-2">Message Data (JSON)</label>
+                        <textarea 
+                            id="sendData"
+                            rows="6"
+                            class="w-full px-3 py-2 bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring font-mono text-sm"
+                            placeholder='{"message": "Hello from playground!", "timestamp": "2024-01-15"}'
+                        >{"message": "Hello from playground!", "timestamp": ""}</textarea>
+                    </div>
+                    <button 
+                        type="button"
+                        id="sendEventBtn"
+                        class="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium"
+                    >
+                        Send Event
+                    </button>
+                </form>
+
+                <div id="sendResult" class="mt-4"></div>
+            </div>
+
+            <!-- Listen Section -->
+            <div class="bg-card border border-border rounded-lg p-6 shadow-lg">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-xl font-semibold text-foreground">📥 Listen Events</h2>
+                    <span id="listenStatus" class="flex items-center text-sm text-muted-foreground">
+                        <span class="status-indicator status-disconnected"></span>
+                        Disconnected
+                    </span>
+                </div>
+
+                <div class="space-y-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-foreground mb-2">Channel Name</label>
+                        <input 
+                            type="text" 
+                            id="listenChannel"
+                            value="test-channel"
+                            class="w-full px-3 py-2 bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                            placeholder="channel-name"
+                        >
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-foreground mb-2">Event Name (leave empty for all events)</label>
+                        <input 
+                            type="text" 
+                            id="listenEvent"
+                            value="test-event"
+                            class="w-full px-3 py-2 bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                            placeholder="event-name or empty for all"
+                        >
+                    </div>
+                    <div class="flex gap-2">
+                        <button 
+                            type="button"
+                            onclick="subscribeChannel()"
+                            class="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium"
+                        >
+                            Subscribe
+                        </button>
+                        <button 
+                            type="button"
+                            onclick="unsubscribeChannel()"
+                            class="flex-1 px-4 py-2 bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90 transition-colors font-medium"
+                        >
+                            Unsubscribe
+                        </button>
+                    </div>
+                </div>
+
+                <div class="border-t border-border pt-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-sm font-medium text-foreground">Received Events</h3>
+                        <button 
+                            type="button"
+                            onclick="clearEvents()"
+                            class="text-xs text-muted-foreground hover:text-foreground"
+                        >
+                            Clear
+                        </button>
+                    </div>
+                    <div id="eventsList" class="space-y-2 max-h-96 overflow-y-auto">
+                        <p class="text-sm text-muted-foreground text-center py-4">No events received yet...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let pusher = null;
+        let currentChannel = null;
+        let eventCount = 0;
+
+        // Load apps on page load
+        async function loadApps() {
+            try {
+                const response = await fetch('/api/apps');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const select = document.getElementById('appSelect');
+                    select.innerHTML = '<option value="">Select an app...</option>';
+                    data.apps.forEach(app => {
+                        const option = document.createElement('option');
+                        option.value = app.id;
+                        option.textContent = `${app.id} (${app.key})`;
+                        option.dataset.key = app.key;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to load apps:', error);
+            }
+        }
+
+        function loadAppConfig() {
+            const select = document.getElementById('appSelect');
+            const selectedOption = select.options[select.selectedIndex];
+            if (selectedOption.value) {
+                document.getElementById('appKey').value = selectedOption.dataset.key;
+                // Note: We can't get the secret from the API for security
+            }
+        }
+
+        function toggleSecretInput() {
+            const input = document.getElementById('appSecret');
+            input.type = input.type === 'password' ? 'text' : 'password';
+        }
+
+        function updateListenStatus(status, text) {
+            const indicator = document.getElementById('listenStatus').querySelector('.status-indicator');
+            const statusText = document.getElementById('listenStatus');
+            indicator.className = `status-indicator status-${status}`;
+            statusText.innerHTML = `<span class="status-indicator status-${status}"></span>${text}`;
+        }
+
+        function updateSendStatus(status, text) {
+            const indicator = document.getElementById('sendStatus').querySelector('.status-indicator');
+            const statusText = document.getElementById('sendStatus');
+            indicator.className = `status-indicator status-${status}`;
+            statusText.innerHTML = `<span class="status-indicator status-${status}"></span>${text}`;
+        }
+
+        async function connectListener() {
+            const appKey = document.getElementById('appKey').value;
+            const appSecret = document.getElementById('appSecret').value;
+
+            if (!appKey) {
+                alert('Please enter an App Key');
+                return;
+            }
+
+            try {
+                updateListenStatus('connecting', 'Connecting...');
+
+                // Disconnect existing connection
+                if (pusher) {
+                    pusher.disconnect();
+                }
+
+                // Create new Pusher instance
+                // Use window.location.hostname for Docker compatibility
+                const wsHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+                    ? window.location.hostname 
+                    : window.location.hostname;
+                pusher = new Pusher(appKey, {
+                    cluster: 'mt1',
+                    wsHost: wsHost,
+                    wsPort: 6001,
+                    forceTLS: false,
+                    enabledTransports: ['ws', 'wss']
+                });
+
+                // Connection event handlers
+                pusher.connection.bind('state_change', (states) => {
+                    console.log('Connection state changed:', states.previous, '->', states.current);
+                });
+
+                pusher.connection.bind('connected', () => {
+                    console.log('Successfully connected to Soketi');
+                    updateListenStatus('connected', 'Connected');
+                    showNotification('Successfully connected to Soketi!', 'success');
+                });
+
+                pusher.connection.bind('disconnected', () => {
+                    console.log('Disconnected from Soketi');
+                    updateListenStatus('disconnected', 'Disconnected');
+                });
+
+                pusher.connection.bind('error', (err) => {
+                    console.error('Pusher connection error object:', err);
+                    updateListenStatus('disconnected', 'Connection Error');
+                    let errorMsg = 'Unknown error';
+                    
+                    if (err) {
+                        if (err.error && err.error.message) {
+                            errorMsg = err.error.message;
+                        } else if (err.message) {
+                            errorMsg = err.message;
+                        } else if (err.data && err.data.message) {
+                            errorMsg = err.data.message;
+                        } else if (typeof err === 'string') {
+                            errorMsg = err;
+                        } else {
+                            errorMsg = JSON.stringify(err);
+                        }
+                    }
+                    
+                    showNotification('Connection error: ' + errorMsg, 'error');
+                });
+
+                // Auto-subscribe if channel is already set
+                const channelName = document.getElementById('listenChannel').value;
+                if (channelName) {
+                    setTimeout(() => subscribeChannel(), 500);
+                }
+
+            } catch (error) {
+                updateListenStatus('disconnected', 'Failed to Connect');
+                const errorMsg = error?.message || error?.toString() || 'Unknown connection error';
+                console.error('Connection error details:', error);
+                showNotification('Failed to connect: ' + errorMsg, 'error');
+            }
+        }
+
+        function subscribeChannel() {
+            if (!pusher) {
+                alert('Please connect first');
+                return;
+            }
+
+            const channelName = document.getElementById('listenChannel').value;
+            const eventName = document.getElementById('listenEvent').value;
+
+            if (!channelName) {
+                alert('Please enter a channel name');
+                return;
+            }
+
+            try {
+                // Unsubscribe from previous channel
+                if (currentChannel) {
+                    pusher.unsubscribe(currentChannel.name);
+                }
+
+                // Subscribe to new channel
+                currentChannel = pusher.subscribe(channelName);
+
+                currentChannel.bind('pusher:subscription_succeeded', () => {
+                    showNotification(`Subscribed to channel: ${channelName}`, 'success');
+                });
+
+                currentChannel.bind('pusher:subscription_error', (error) => {
+                    showNotification('Subscription error: ' + error, 'error');
+                });
+
+                // Bind to specific event or all events
+                if (eventName) {
+                    currentChannel.bind(eventName, (data) => {
+                        addEvent(eventName, data);
+                    });
+                } else {
+                    // Bind to all events
+                    currentChannel.bind_global((eventName, data) => {
+                        addEvent(eventName, data);
+                    });
+                }
+
+            } catch (error) {
+                showNotification('Failed to subscribe: ' + error.message, 'error');
+            }
+        }
+
+        function unsubscribeChannel() {
+            if (currentChannel) {
+                pusher.unsubscribe(currentChannel.name);
+                currentChannel = null;
+                showNotification('Unsubscribed from channel', 'success');
+            }
+        }
+
+        function addEvent(eventName, data) {
+            eventCount++;
+            const eventsList = document.getElementById('eventsList');
+            
+            // Remove "no events" message
+            if (eventsList.querySelector('p.text-center')) {
+                eventsList.innerHTML = '';
+            }
+
+            const eventElement = document.createElement('div');
+            eventElement.className = 'bg-background border border-border rounded-md p-3 text-sm';
+            eventElement.innerHTML = `
+                <div class="flex items-start justify-between mb-2">
+                    <div>
+                        <span class="font-medium text-foreground">Event #${eventCount}</span>
+                        <span class="text-muted-foreground ml-2">${new Date().toLocaleTimeString()}</span>
+                    </div>
+                    <span class="px-2 py-1 bg-primary/20 text-primary rounded text-xs">${eventName}</span>
+                </div>
+                <pre class="text-xs text-muted-foreground overflow-x-auto mt-2">${JSON.stringify(data, null, 2)}</pre>
+            `;
+
+            eventsList.insertBefore(eventElement, eventsList.firstChild);
+
+            // Keep only last 50 events
+            while (eventsList.children.length > 50) {
+                eventsList.removeChild(eventsList.lastChild);
+            }
+        }
+
+        function clearEvents() {
+            const eventsList = document.getElementById('eventsList');
+            eventsList.innerHTML = '<p class="text-sm text-muted-foreground text-center py-4">No events received yet...</p>';
+            eventCount = 0;
+        }
+
+        function sendEvent() {
+            // Execute async operation
+            (async () => {
+                const appId = document.getElementById('appSelect').value;
+                const appKey = document.getElementById('appKey').value;
+                const appSecret = document.getElementById('appSecret').value;
+                const channel = document.getElementById('sendChannel').value;
+                const eventName = document.getElementById('sendEvent').value;
+                let data = document.getElementById('sendData').value;
+
+                if (!appId || !appKey || !appSecret) {
+                    showNotification('Please configure app credentials', 'error');
+                    return;
+                }
+
+                if (!channel || !eventName) {
+                    showNotification('Please fill in channel and event name', 'error');
+                    return;
+                }
+
+                try {
+                    // Try to parse JSON
+                    try {
+                        // Replace any JavaScript expressions with their values
+                        data = data.replace(/new Date\(\)\.toISOString\(\)/g, `"${new Date().toISOString()}"`);
+                        data = JSON.parse(data);
+                        // Add timestamp if not present
+                        if (!data.timestamp) {
+                            data.timestamp = new Date().toISOString();
+                        }
+                    } catch (e) {
+                        // If not valid JSON, treat as string
+                        data = { message: data, timestamp: new Date().toISOString() };
+                    }
+
+                    updateSendStatus('connecting', 'Sending...');
+
+                    const response = await fetch('/api/send-event', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            appId,
+                            appKey,
+                            appSecret,
+                            channel,
+                            event: eventName,
+                            data
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        updateSendStatus('connected', 'Sent Successfully');
+                        showNotification(`Event "${eventName}" sent to channel "${channel}"`, 'success');
+                        document.getElementById('sendResult').innerHTML = `
+                            <div class="p-3 bg-green-500/10 border border-green-500/30 rounded-md text-green-400 text-sm">
+                                ✓ Event sent successfully at ${new Date().toLocaleTimeString()}
+                            </div>
+                        `;
+                    } else {
+                        updateSendStatus('disconnected', 'Send Failed');
+                        showNotification('Failed to send event: ' + result.error, 'error');
+                        document.getElementById('sendResult').innerHTML = `
+                            <div class="p-3 bg-red-500/10 border border-red-500/30 rounded-md text-red-400 text-sm">
+                                ✗ Error: ${result.error}
+                            </div>
+                        `;
+                    }
+                } catch (error) {
+                    updateSendStatus('disconnected', 'Send Failed');
+                    showNotification('Failed to send event: ' + error.message, 'error');
+                    document.getElementById('sendResult').innerHTML = `
+                        <div class="p-3 bg-red-500/10 border border-red-500/30 rounded-md text-red-400 text-sm">
+                            ✗ Error: ${error.message}
+                        </div>
+                    `;
+                }
+            })();
+            
+            return false;
+        }
+
+        function showNotification(message, type) {
+            // Show notification in console and update alert container
+            console.log(`[${type.toUpperCase()}] ${message}`);
+            
+            const alertContainer = document.getElementById('alert-container');
+            if (alertContainer) {
+                const alert = document.createElement('div');
+                alert.className = `p-4 rounded-lg border mb-4 ${
+                    type === 'success' 
+                        ? 'bg-green-500/10 border-green-500/30 text-green-400' 
+                        : 'bg-red-500/10 border-red-500/30 text-red-400'
+                }`;
+                alert.textContent = message;
+                alertContainer.innerHTML = '';
+                alertContainer.appendChild(alert);
+                
+                setTimeout(() => {
+                    alert.remove();
+                }, 5000);
+            }
+        }
+
+        // Load apps on page load
+        loadApps();
+
+        // Add event listener to send button
+        document.addEventListener('DOMContentLoaded', () => {
+            const sendButton = document.getElementById('sendEventBtn');
+            if (sendButton) {
+                sendButton.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    sendEvent();
+                });
+            }
+        });
+    </script>
+</body>
+</html>

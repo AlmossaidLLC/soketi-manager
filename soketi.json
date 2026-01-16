@@ -1,0 +1,33 @@
+{
+  "debug": true,
+  "port": 6001,
+  "httpApi": {
+    "port": 9601
+  },
+  "appManager": {
+    "driver": "array",
+    "cache": {
+      "enabled": false
+    },
+    "array": {
+      "apps": [
+        {
+          "id": "soketi-app-1",
+          "key": "soketi-key-1",
+          "secret": "soketi-secret-1",
+          "enabled": true,
+          "enableClientMessages": true,
+          "maxConnections": 100
+        },
+        {
+          "id": "Consequat In doloru",
+          "key": "Saepe sint error nos",
+          "secret": "Pa$$w0rd!",
+          "enabled": true,
+          "enableClientMessages": true,
+          "maxConnections": 41
+        }
+      ]
+    }
+  }
+}

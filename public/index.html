@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soketi App Manager</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <style>
+        /* Override highlight.js colors to match dark theme */
+        #sdkCodeContent,
+        #sdkCodeContent.hljs,
+        #sdkCodeContent code,
+        #sdkCodeContent code.hljs {
+            color: hsl(210 40% 98%) !important;
+            background: hsl(222.2 84% 4.9%) !important;
+        }
+        
+        /* Ensure all text in code block is visible */
+        #sdkCodeContent *,
+        #sdkCodeContent.hljs * {
+            color: inherit !important;
+        }
+        
+        /* Specific syntax highlighting colors */
+        #sdkCodeContent.hljs .hljs-comment,
+        #sdkCodeContent.hljs .hljs-quote {
+            color: hsl(215 20.2% 65.1%) !important;
+            font-style: italic;
+        }
+        
+        #sdkCodeContent.hljs .hljs-keyword,
+        #sdkCodeContent.hljs .hljs-selector-tag,
+        #sdkCodeContent.hljs .hljs-literal {
+            color: hsl(210 40% 98%) !important;
+            font-weight: 600;
+        }
+        
+        #sdkCodeContent.hljs .hljs-string,
+        #sdkCodeContent.hljs .hljs-title {
+            color: hsl(210 40% 98%) !important;
+        }
+        
+        #sdkCodeContent.hljs .hljs-number,
+        #sdkCodeContent.hljs .hljs-regexp {
+            color: hsl(210 40% 98%) !important;
+        }
+        
+        #sdkCodeContent.hljs .hljs-function,
+        #sdkCodeContent.hljs .hljs-built_in {
+            color: hsl(210 40% 98%) !important;
+        }
+        
+        #sdkCodeContent.hljs .hljs-variable,
+        #sdkCodeContent.hljs .hljs-params {
+            color: hsl(210 40% 98%) !important;
+        }
+        
+        /* Fallback: ensure text is always visible */
+        #sdkCode pre,
+        #sdkCode code {
+            color: hsl(210 40% 98%) !important;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/php.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        border: "hsl(217.2 32.6% 17.5%)",
+                        input: "hsl(217.2 32.6% 17.5%)",
+                        ring: "hsl(212.7 26.8% 83.9%)",
+                        background: "hsl(222.2 84% 4.9%)",
+                        foreground: "hsl(210 40% 98%)",
+                        primary: {
+                            DEFAULT: "hsl(210 40% 98%)",
+                            foreground: "hsl(222.2 47.4% 11.2%)",
+                        },
+                        secondary: {
+                            DEFAULT: "hsl(217.2 32.6% 17.5%)",
+                            foreground: "hsl(210 40% 98%)",
+                        },
+                        destructive: {
+                            DEFAULT: "hsl(0 62.8% 30.6%)",
+                            foreground: "hsl(210 40% 98%)",
+                        },
+                        muted: {
+                            DEFAULT: "hsl(217.2 32.6% 17.5%)",
+                            foreground: "hsl(215 20.2% 65.1%)",
+                        },
+                        accent: {
+                            DEFAULT: "hsl(217.2 32.6% 17.5%)",
+                            foreground: "hsl(210 40% 98%)",
+                        },
+                        card: {
+                            DEFAULT: "hsl(222.2 47.4% 11.2%)",
+                            foreground: "hsl(210 40% 98%)",
+                        },
+                    },
+                    borderRadius: {
+                        lg: "0.5rem",
+                        md: "calc(0.5rem - 2px)",
+                        sm: "calc(0.5rem - 4px)",
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        @layer base {
+            * {
+                @apply border-border;
+            }
+            body {
+                @apply bg-background text-foreground;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-background antialiased">
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+        <!-- Header -->
+        <header class="bg-card border border-border rounded-lg p-6 mb-6 shadow-lg">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h1 class="text-3xl font-bold text-foreground mb-2">🚀 Soketi App Manager</h1>
+                    <p class="text-muted-foreground">Manage your Soketi WebSocket applications</p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button 
+                        onclick="openCreateModal()" 
+                        class="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium text-sm"
+                    >
+                        + Create New App
+                    </button>
+                    <button 
+                        onclick="loadApps()" 
+                        class="px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 transition-colors font-medium text-sm"
+                    >
+                        🔄 Refresh
+                    </button>
+                    <button 
+                        onclick="restartSoketi()" 
+                        class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium text-sm"
+                    >
+                        🔄 Restart Soketi
+                    </button>
+                    <a 
+                        href="/playground.html" 
+                        class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium text-sm inline-block"
+                    >
+                        🧪 Playground
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Alert Container -->
+        <div id="alert-container" class="mb-6"></div>
+
+        <!-- Apps Grid -->
+        <div id="apps-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="col-span-full flex items-center justify-center py-12">
+                <div class="text-muted-foreground">Loading apps...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SDK Code Modal -->
+    <div id="sdkModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div class="bg-card border border-border rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div class="p-6 border-b border-border">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-2xl font-bold text-foreground">SDK Integration Code</h2>
+                    <button 
+                        onclick="closeSDKModal()" 
+                        class="text-muted-foreground hover:text-foreground transition-colors text-2xl leading-none"
+                    >
+                        &times;
+                    </button>
+                </div>
+                <p class="text-sm text-muted-foreground mt-2" id="sdkAppInfo"></p>
+            </div>
+            <div class="flex-1 overflow-y-auto p-6">
+                <!-- Tabs -->
+                <div class="flex gap-2 mb-4 border-b border-border">
+                    <button 
+                        onclick="switchSDKTab('javascript')" 
+                        id="tab-javascript"
+                        class="px-4 py-2 font-medium text-sm border-b-2 border-primary text-foreground transition-colors"
+                    >
+                        JavaScript
+                    </button>
+                    <button 
+                        onclick="switchSDKTab('php')" 
+                        id="tab-php"
+                        class="px-4 py-2 font-medium text-sm border-b-2 border-transparent text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                        PHP
+                    </button>
+                    <button 
+                        onclick="switchSDKTab('curl')" 
+                        id="tab-curl"
+                        class="px-4 py-2 font-medium text-sm border-b-2 border-transparent text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                        cURL
+                    </button>
+                </div>
+                <!-- Code Display -->
+                <div class="relative">
+                    <pre id="sdkCode" class="bg-background border border-input rounded-lg p-4 overflow-x-auto text-sm"><code id="sdkCodeContent" class="language-javascript"></code></pre>
+                    <button 
+                        onclick="copySDKCode()" 
+                        class="absolute top-4 right-4 px-3 py-1.5 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors text-xs font-medium z-10"
+                        id="copyBtn"
+                    >
+                        📋 Copy
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create/Edit Modal -->
+    <div id="appModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+        <div class="bg-card border border-border rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 id="modalTitle" class="text-2xl font-bold text-foreground">Create New App</h2>
+                    <button 
+                        onclick="closeModal()" 
+                        class="text-muted-foreground hover:text-foreground transition-colors text-2xl leading-none"
+                    >
+                        &times;
+                    </button>
+                </div>
+                <form id="appForm" onsubmit="saveApp(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-foreground mb-2">App ID *</label>
+                        <input 
+                            type="text" 
+                            id="appId" 
+                            required
+                            class="w-full px-3 py-2 bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+                            placeholder="app-id"
+                        >
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-foreground mb-2">App Key *</label>
+                        <input 
+                            type="text" 
+                            id="appKey" 
+                            required
+                            class="w-full px-3 py-2 bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+                            placeholder="app-key"
+                        >
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-foreground mb-2">App Secret *</label>
+                        <div class="relative">
+                            <input 
+                                type="password" 
+                                id="appSecret" 
+                                required
+                                class="w-full px-3 py-2 pr-10 bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+                                placeholder="app-secret"
+                            >
+                            <button 
+                                type="button" 
+                                onclick="toggleSecret()" 
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                                👁️
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-foreground mb-2">Max Connections</label>
+                        <input 
+                            type="number" 
+                            id="maxConnections" 
+                            value="100" 
+                            min="1"
+                            class="w-full px-3 py-2 bg-background border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+                        >
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <input 
+                            type="checkbox" 
+                            id="enabled" 
+                            checked
+                            class="w-4 h-4 rounded border-input bg-background text-primary focus:ring-2 focus:ring-ring"
+                        >
+                        <label for="enabled" class="text-sm font-medium text-foreground cursor-pointer">Enabled</label>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <input 
+                            type="checkbox" 
+                            id="enableClientMessages" 
+                            checked
+                            class="w-4 h-4 rounded border-input bg-background text-primary focus:ring-2 focus:ring-ring"
+                        >
+                        <label for="enableClientMessages" class="text-sm font-medium text-foreground cursor-pointer">Enable Client Messages</label>
+                    </div>
+                    <div class="flex gap-3 pt-4">
+                        <button 
+                            type="submit" 
+                            class="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium"
+                        >
+                            Save
+                        </button>
+                        <button 
+                            type="button" 
+                            onclick="closeModal()" 
+                            class="flex-1 px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 transition-colors font-medium"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Helper function to escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        let editingAppId = null;
+
+        async function loadApps() {
+            try {
+                const response = await fetch('/api/apps');
+                const data = await response.json();
+                
+                if (data.success) {
+                    renderApps(data.apps);
+                } else {
+                    showAlert('Error loading apps: ' + data.error, 'error');
+                }
+            } catch (error) {
+                showAlert('Failed to load apps: ' + error.message, 'error');
+            }
+        }
+
+        function renderApps(apps) {
+            const container = document.getElementById('apps-container');
+            
+            if (apps.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full flex items-center justify-center py-12">
+                        <div class="text-center">
+                            <p class="text-muted-foreground mb-4">No apps found. Create your first app!</p>
+                            <button 
+                                onclick="openCreateModal()" 
+                                class="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium"
+                            >
+                                Create App
+                            </button>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = apps.map(app => {
+                const appId = escapeHtml(app.id || '');
+                const appKey = escapeHtml(app.key || '');
+                const appIdAttr = escapeHtml(app.id || '');
+                const appKeyAttr = escapeHtml(app.key || '');
+                return `
+                <div class="bg-card border border-border rounded-lg p-6 shadow-lg hover:shadow-xl transition-shadow">
+                    <div class="flex items-start justify-between mb-4">
+                        <h3 class="text-xl font-semibold text-foreground">${appId || 'N/A'}</h3>
+                        <span class="px-2 py-1 text-xs font-medium rounded-full ${
+                            app.enabled 
+                                ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+                                : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                        }">
+                            ${app.enabled ? '✓ Enabled' : '✗ Disabled'}
+                        </span>
+                    </div>
+                    <div class="space-y-2 mb-4">
+                        <p class="text-sm text-muted-foreground">
+                            <span class="font-medium text-foreground">Key:</span> 
+                            <code class="px-1.5 py-0.5 bg-background rounded text-xs">${appKey || 'N/A'}</code>
+                        </p>
+                        <p class="text-sm text-muted-foreground">
+                            <span class="font-medium text-foreground">Max Connections:</span> 
+                            ${app.maxConnections || 'Unlimited'}
+                        </p>
+                        <p class="text-sm text-muted-foreground">
+                            <span class="font-medium text-foreground">Client Messages:</span> 
+                            ${app.enableClientMessages ? 'Enabled' : 'Disabled'}
+                        </p>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <button 
+                            data-action="sdk"
+                            data-app-id="${appIdAttr}"
+                            data-app-key="${appKeyAttr}"
+                            class="sdk-btn w-full px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"
+                        >
+                            📋 View SDK Code
+                        </button>
+                        <div class="flex gap-2">
+                            <button 
+                                data-action="edit"
+                                data-app-id="${appIdAttr}"
+                                class="edit-btn flex-1 px-3 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors text-sm font-medium"
+                            >
+                                Edit
+                            </button>
+                            <button 
+                                data-action="delete"
+                                data-app-id="${appIdAttr}"
+                                class="delete-btn flex-1 px-3 py-2 bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90 transition-colors text-sm font-medium"
+                            >
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            }).join('');
+        }
+
+        function openCreateModal() {
+            editingAppId = null;
+            document.getElementById('modalTitle').textContent = 'Create New App';
+            document.getElementById('appForm').reset();
+            document.getElementById('appId').disabled = false;
+            document.getElementById('appId').classList.remove('opacity-50', 'cursor-not-allowed');
+            document.getElementById('appModal').classList.remove('hidden');
+        }
+
+        async function editApp(appId) {
+            try {
+                const response = await fetch(`/api/apps/${appId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    editingAppId = appId;
+                    document.getElementById('modalTitle').textContent = 'Edit App';
+                    document.getElementById('appId').value = data.app.id;
+                    document.getElementById('appId').disabled = true;
+                    document.getElementById('appId').classList.add('opacity-50', 'cursor-not-allowed');
+                    document.getElementById('appKey').value = data.app.key;
+                    document.getElementById('appSecret').value = data.app.secret;
+                    document.getElementById('maxConnections').value = data.app.maxConnections || 100;
+                    document.getElementById('enabled').checked = data.app.enabled !== false;
+                    document.getElementById('enableClientMessages').checked = data.app.enableClientMessages !== false;
+                    document.getElementById('appModal').classList.remove('hidden');
+                } else {
+                    showAlert('Error loading app: ' + data.error, 'error');
+                }
+            } catch (error) {
+                showAlert('Failed to load app: ' + error.message, 'error');
+            }
+        }
+
+        async function saveApp(event) {
+            event.preventDefault();
+            
+            const appData = {
+                id: document.getElementById('appId').value,
+                key: document.getElementById('appKey').value,
+                secret: document.getElementById('appSecret').value,
+                maxConnections: parseInt(document.getElementById('maxConnections').value),
+                enabled: document.getElementById('enabled').checked,
+                enableClientMessages: document.getElementById('enableClientMessages').checked
+            };
+
+            try {
+                let response;
+                if (editingAppId) {
+                    response = await fetch(`/api/apps/${editingAppId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(appData)
+                    });
+                } else {
+                    response = await fetch('/api/apps', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(appData)
+                    });
+                }
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert(
+                        `App ${editingAppId ? 'updated' : 'created'} successfully! ${data.restart.success ? 'Soketi restarted.' : 'Warning: ' + data.restart.message}`,
+                        data.restart.success ? 'success' : 'error'
+                    );
+                    closeModal();
+                    loadApps();
+                } else {
+                    showAlert('Error: ' + data.error, 'error');
+                }
+            } catch (error) {
+                showAlert('Failed to save app: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteApp(appId) {
+            if (!confirm(`Are you sure you want to delete app "${appId}"?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/apps/${appId}`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert(
+                        `App deleted successfully! ${data.restart.success ? 'Soketi restarted.' : 'Warning: ' + data.restart.message}`,
+                        data.restart.success ? 'success' : 'error'
+                    );
+                    loadApps();
+                } else {
+                    showAlert('Error: ' + data.error, 'error');
+                }
+            } catch (error) {
+                showAlert('Failed to delete app: ' + error.message, 'error');
+            }
+        }
+
+        async function restartSoketi() {
+            try {
+                const response = await fetch('/api/restart', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('Soketi restarted successfully!', 'success');
+                } else {
+                    showAlert('Failed to restart Soketi: ' + data.message, 'error');
+                }
+            } catch (error) {
+                showAlert('Failed to restart Soketi: ' + error.message, 'error');
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('appModal').classList.add('hidden');
+            editingAppId = null;
+        }
+
+        function toggleSecret() {
+            const secretInput = document.getElementById('appSecret');
+            secretInput.type = secretInput.type === 'password' ? 'text' : 'password';
+        }
+
+        let currentSDKTab = 'javascript';
+        let currentSDKApp = null;
+        let currentSDKAppKey = null;
+
+        async function showSDKCode(appId, appKey) {
+            try {
+                const response = await fetch(`/api/apps/${appId}`);
+                const data = await response.json();
+                
+                if (data.success && data.app) {
+                    currentSDKApp = data.app;
+                    currentSDKAppKey = appKey;
+                    document.getElementById('sdkAppInfo').textContent = `App ID: ${appId} | Key: ${appKey}`;
+                    switchSDKTab('javascript');
+                    document.getElementById('sdkModal').classList.remove('hidden');
+                } else {
+                    showAlert('Error loading app: ' + (data.error || 'App not found'), 'error');
+                }
+            } catch (error) {
+                showAlert('Failed to load app: ' + error.message, 'error');
+            }
+        }
+
+        function switchSDKTab(tab) {
+            currentSDKTab = tab;
+            
+            // Update tab styles
+            document.querySelectorAll('[id^="tab-"]').forEach(btn => {
+                btn.classList.remove('border-primary', 'text-foreground');
+                btn.classList.add('border-transparent', 'text-muted-foreground');
+            });
+            const activeTab = document.getElementById(`tab-${tab}`);
+            if (activeTab) {
+                activeTab.classList.remove('border-transparent', 'text-muted-foreground');
+                activeTab.classList.add('border-primary', 'text-foreground');
+            }
+            
+            // Update code content
+            updateSDKCode();
+        }
+
+        function updateSDKCode() {
+            if (!currentSDKApp || !currentSDKAppKey) return;
+            
+            const appId = currentSDKApp.id || '';
+            const appKey = currentSDKAppKey || '';
+            const appSecret = currentSDKApp.secret || '';
+            const host = window.location.hostname || 'localhost';
+            const wsPort = '6001';
+            const httpPort = '6001';
+            
+            let code = '';
+            let language = '';
+            
+            switch(currentSDKTab) {
+                case 'javascript':
+                    language = 'javascript';
+                    const scriptOpen = '<' + 'script';
+                    const scriptClose = '</' + 'script>';
+                    code = `// Install: npm install pusher-js
+// or use CDN: ${scriptOpen} src="https://js.pusher.com/8.2.0/pusher.min.js">${scriptClose}
+
+import Pusher from 'pusher-js';
+
+// Initialize Pusher
+const pusher = new Pusher('${appKey}', {
+  wsHost: '${host}',
+  wsPort: ${wsPort},
+  wssPort: ${wsPort},
+  forceTLS: false,
+  enabledTransports: ['ws', 'wss'],
+  cluster: '',
+  disableStats: true
+});
+
+// Subscribe to a channel
+const channel = pusher.subscribe('my-channel');
+
+// Listen for events
+channel.bind('my-event', function(data) {
+  console.log('Received:', data);
+});
+
+// Send an event (client events - if enabled)
+channel.trigger('client-my-event', {
+  message: 'Hello from client!'
+});`;
+                    break;
+                    
+                case 'php':
+                    language = 'php';
+                    code = `// Install: composer require pusher/pusher-php-server
+
+<?php
+require __DIR__ . '/vendor/autoload.php';
+
+use Pusher\\Pusher;
+
+// Initialize Pusher
+$pusher = new Pusher(
+    '${appKey}',      // app_key
+    '${appSecret}',   // app_secret
+    '${appId}',       // app_id
+    [
+        'cluster' => '',
+        'host' => '${host}',
+        'port' => ${httpPort},
+        'scheme' => 'http',
+        'useTLS' => false
+    ]
+);
+
+// Trigger an event
+$pusher->trigger('my-channel', 'my-event', [
+    'message' => 'Hello from PHP!',
+    'timestamp' => time()
+]);
+
+// Get channel info
+$channelInfo = $pusher->getChannelInfo('my-channel');
+
+// Get all channels
+$channels = $pusher->getChannels();
+
+// Get users in presence channel
+// $users = $pusher->getPresenceUsers('presence-channel');
+?>`;
+                    break;
+                    
+                case 'curl':
+                    language = 'bash';
+                    const sq = String.fromCharCode(39); // single quote
+                    code = '# Method 1: Using Soketi HTTP API (Pusher-compatible)\n' +
+                        '# Trigger an event\n' +
+                        `curl -X POST http://${host}:${httpPort}/apps/${appId}/events \\\n` +
+                        '  -H "Content-Type: application/json" \\\n' +
+                        `  -H "Authorization: Bearer ${appSecret}" \\\n` +
+                        `  -d ${sq}{\n` +
+                        '    "name": "my-event",\n' +
+                        '    "channel": "my-channel",\n' +
+                        '    "data": {\n' +
+                        '      "message": "Hello from cURL!",\n' +
+                        `      "timestamp": ${sq}$(date +%s)${sq}\n` +
+                        '    }\n' +
+                        `  }${sq}\n\n` +
+                        '# Get channel info\n' +
+                        `curl -X GET "http://${host}:${httpPort}/apps/${appId}/channels/my-channel" \\\n` +
+                        `  -H "Authorization: Bearer ${appSecret}"\n\n` +
+                        '# Get all channels\n' +
+                        `curl -X GET "http://${host}:${httpPort}/apps/${appId}/channels" \\\n` +
+                        `  -H "Authorization: Bearer ${appSecret}"\n\n` +
+                        '# Get users in presence channel\n' +
+                        `curl -X GET "http://${host}:${httpPort}/apps/${appId}/channels/presence-channel/users" \\\n` +
+                        `  -H "Authorization: Bearer ${appSecret}"\n\n` +
+                        '# Method 2: Using App Manager API (Alternative)\n' +
+                        `curl -X POST http://${host}:3000/api/send-event \\\n` +
+                        '  -H "Content-Type: application/json" \\\n' +
+                        `  -d ${sq}{\n` +
+                        `    "appId": "${appId}",\n` +
+                        `    "appKey": "${appKey}",\n` +
+                        `    "appSecret": "${appSecret}",\n` +
+                        '    "channel": "my-channel",\n' +
+                        '    "event": "my-event",\n' +
+                        '    "data": {\n' +
+                        '      "message": "Hello from cURL!"\n' +
+                        '    }\n' +
+                        `  }${sq}`;
+                    break;
+            }
+            
+            const codeElement = document.getElementById('sdkCodeContent');
+            if (!codeElement) return;
+            
+            // Clear existing content and classes
+            codeElement.textContent = '';
+            codeElement.className = '';
+            
+            // Set the language class
+            codeElement.className = `language-${language}`;
+            
+            // Set the code content
+            codeElement.textContent = code;
+            
+            // Highlight code if hljs is available
+            if (typeof hljs !== 'undefined') {
+                // Use setTimeout to ensure DOM is updated before highlighting
+                setTimeout(() => {
+                    try {
+                        hljs.highlightElement(codeElement);
+                        // Ensure hljs class is present for styling
+                        if (!codeElement.classList.contains('hljs')) {
+                            codeElement.classList.add('hljs');
+                        }
+                    } catch (e) {
+                        console.warn('Highlight.js error:', e);
+                    }
+                }, 10);
+            }
+        }
+
+        function copySDKCode() {
+            const code = document.getElementById('sdkCodeContent').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                const btn = document.getElementById('copyBtn');
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                btn.classList.add('bg-green-600');
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.classList.remove('bg-green-600');
+                }, 2000);
+            }).catch(err => {
+                showAlert('Failed to copy code: ' + err.message, 'error');
+            });
+        }
+
+        function closeSDKModal() {
+            document.getElementById('sdkModal').classList.add('hidden');
+            currentSDKApp = null;
+            currentSDKAppKey = null;
+        }
+
+        function showAlert(message, type) {
+            const container = document.getElementById('alert-container');
+            const alert = document.createElement('div');
+            alert.className = `p-4 rounded-lg border ${
+                type === 'success' 
+                    ? 'bg-green-500/10 border-green-500/30 text-green-400' 
+                    : 'bg-red-500/10 border-red-500/30 text-red-400'
+            }`;
+            alert.textContent = message;
+            container.innerHTML = '';
+            container.appendChild(alert);
+            
+            setTimeout(() => {
+                alert.remove();
+            }, 5000);
+        }
+
+        // Event delegation for dynamically created buttons
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('[data-action]');
+            if (!btn) return;
+            
+            const action = btn.getAttribute('data-action');
+            const appId = btn.getAttribute('data-app-id');
+            const appKey = btn.getAttribute('data-app-key');
+            
+            if (action === 'sdk' && appId && appKey) {
+                showSDKCode(appId, appKey);
+            } else if (action === 'edit' && appId) {
+                editApp(appId);
+            } else if (action === 'delete' && appId) {
+                deleteApp(appId);
+            }
+        });
+
+        // Load apps on page load
+        loadApps();
+    </script>
+</body>
+</html>
