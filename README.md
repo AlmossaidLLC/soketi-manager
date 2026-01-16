@@ -10,6 +10,7 @@
 [![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org/)
 [![License](https://img.shields.io/badge/License-ISC-blue?style=flat-square)](LICENSE)
 [![Soketi](https://img.shields.io/badge/Soketi-1.4.16-6366f1?style=flat-square)](https://soketi.app/)
+[![GHCR](https://img.shields.io/badge/GHCR-ghcr.io/almossaidllc/soketi--manager-blue?style=flat-square&logo=github)](https://github.com/orgs/AlmossaidLLC/packages/container/package/soketi-manager)
 
 [Features](#-features) • [Quick Start](#-quick-start) • [Architecture](#-architecture) • [API](#-api-endpoints) • [Development](#-development)
 
@@ -47,6 +48,26 @@ Perfect for developers who need:
 
 ### Installation
 
+#### Option 1: Using Pre-built Image from GitHub Container Registry (Recommended)
+
+```bash
+# Pull the image from GHCR
+docker pull ghcr.io/almossaidllc/soketi-manager:latest
+
+# Run using docker-compose with GHCR image
+docker-compose -f docker-compose.ghcr.yml up -d
+
+# Or run directly with Docker
+docker run -d \
+  --name soketi-app-manager \
+  -p 3000:3000 \
+  -p 6001:6001 \
+  -v $(pwd)/soketi.json:/app/soketi.json:rw \
+  ghcr.io/almossaidllc/soketi-manager:latest
+```
+
+#### Option 2: Build from Source
+
 ```bash
 # Clone the repository
 git clone https://github.com/yourusername/soketi-app-manager.git
@@ -60,6 +81,14 @@ docker-compose logs -f
 ```
 
 That's it! Your Soketi App Manager is now running.
+
+### Docker Image
+
+The Docker image is automatically built and pushed to GitHub Container Registry on every push to `main`:
+
+- **Image**: `ghcr.io/almossaidllc/soketi-manager:latest`
+- **Registry**: [GitHub Container Registry](https://github.com/orgs/AlmossaidLLC/packages/container/package/soketi-manager)
+- **Tags**: `latest` (main branch), `main-<sha>` (specific commits)
 
 ### Access Services
 
@@ -174,18 +203,29 @@ soketi-app-manager/
 ├── public/
 │   ├── index.html       # Dashboard UI
 │   └── playground.html  # WebSocket playground
-├── docker-compose.yml   # Docker Compose configuration
-├── Dockerfile          # Container definition
-├── start-services.js   # Process manager
-└── soketi.json         # Soketi configuration
+├── docker-compose.yml      # Docker Compose configuration (builds locally)
+├── docker-compose.ghcr.yml # Docker Compose using GHCR image
+├── Dockerfile              # Container definition
+├── start-services.js       # Process manager
+└── soketi.json             # Soketi configuration
 ```
 
 ## 🚢 Production Deployment
 
-The single container approach is perfect for production environments:
+The single container approach is perfect for production environments. Use the pre-built image from GitHub Container Registry:
 
 ```bash
-docker-compose up -d
+# Using docker-compose (recommended)
+docker-compose -f docker-compose.ghcr.yml up -d
+
+# Or using Docker directly
+docker run -d \
+  --name soketi-app-manager \
+  --restart unless-stopped \
+  -p 3000:3000 \
+  -p 6001:6001 \
+  -v /path/to/soketi.json:/app/soketi.json:rw \
+  ghcr.io/almossaidllc/soketi-manager:latest
 ```
 
 ### Production Features
@@ -214,6 +254,19 @@ For production, you might want to add:
 - Logging configuration
 - Network configuration
 - Volume backups
+
+## 🔄 CI/CD
+
+This project includes GitHub Actions workflow that automatically builds and pushes Docker images to GitHub Container Registry:
+
+- **Trigger**: Automatically runs on every push to `main` branch
+- **Workflow**: `.github/workflows/docker-publish.yml`
+- **Image Tags**: 
+  - `latest` - Latest build from main branch
+  - `main-<sha>` - Specific commit SHA tags
+- **Registry**: `ghcr.io/almossaidllc/soketi-manager`
+
+The workflow uses GitHub's built-in `GITHUB_TOKEN` for authentication, so no additional secrets are required.
 
 ## 📝 Configuration
 

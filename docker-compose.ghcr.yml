@@ -1,0 +1,26 @@
+# Docker Compose configuration using GHCR image
+# Usage: docker-compose -f docker-compose.ghcr.yml up -d
+
+services:
+  soketi-app-manager:
+    image: ghcr.io/almossaidllc/soketi-manager:latest
+    container_name: soketi-app-manager
+    entrypoint: ["node"]
+    command: ["/app-manager/start-services.js"]
+    ports:
+      - "3000:3000"  # App Manager
+      - "6001:6001"  # Soketi WebSocket
+    volumes:
+      - ./soketi.json:/app/soketi.json:rw
+      - ./public:/app-manager/public:ro
+    environment:
+      - NODE_ENV=production
+      - SOKETI_APP_MANAGER_DRIVER=array
+      - SOKETI_CONFIG_FILE=/app/soketi.json
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/apps', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
