@@ -5,13 +5,14 @@ services:
   soketi-app-manager:
     image: ghcr.io/almossaidllc/soketi-manager:latest
     container_name: soketi-app-manager
-    entrypoint: ["node"]
-    command: ["/app-manager/start-services.js"]
     ports:
       - "3000:3000"  # App Manager
       - "6001:6001"  # Soketi WebSocket
     volumes:
-      - ./soketi.json:/app/soketi.json:rw
+      # Optional: Named volume for config persistence (auto-initialized if empty)
+      # To use a local file instead, replace with: ./soketi.json:/app/soketi.json:rw
+      - soketi-config:/app/soketi.json:rw
+      # Optional: Mount public directory for custom UI files
       - ./public:/app-manager/public:ro
     environment:
       - NODE_ENV=production
@@ -24,3 +25,8 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+
+volumes:
+  soketi-config:
+    # Named volume - config persists across container restarts
+    # To use a local file instead, replace with: ./soketi.json:/app/soketi.json:rw
