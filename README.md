@@ -50,14 +50,41 @@ Perfect for developers who need:
 
 #### Option 1: Using Pre-built Image from GitHub Container Registry (Recommended)
 
+**✨ Zero Configuration Setup** - Just two commands! The config file is automatically created.
+
 ```bash
-# Pull the image from GHCR
+# Step 1: Pull the image
 docker pull ghcr.io/almossaidllc/soketi-manager:latest
 
-# Run using docker-compose with GHCR image
-docker-compose -f docker-compose.ghcr.yml up -d
+# Step 2: Run the container (that's it - no volume mount needed!)
+docker run -d \
+  --name soketi-app-manager \
+  -p 3000:3000 \
+  -p 6001:6001 \
+  ghcr.io/almossaidllc/soketi-manager:latest
+```
 
-# Or run directly with Docker
+**That's it!** The `soketi.json` config file is automatically created inside the container on first run. No manual configuration needed!
+
+**Alternative: Using docker-compose** (if you prefer):
+```bash
+docker-compose -f docker-compose.ghcr.yml up -d
+```
+
+**Optional: Persist config across container restarts**
+
+If you want your config to persist when you remove/recreate the container, use a volume:
+
+```bash
+# Using a named volume (recommended - Docker manages it)
+docker run -d \
+  --name soketi-app-manager \
+  -p 3000:3000 \
+  -p 6001:6001 \
+  -v soketi-config:/app/soketi.json:rw \
+  ghcr.io/almossaidllc/soketi-manager:latest
+
+# Or mount a local file (if you want to edit it directly)
 docker run -d \
   --name soketi-app-manager \
   -p 3000:3000 \
@@ -65,6 +92,8 @@ docker run -d \
   -v $(pwd)/soketi.json:/app/soketi.json:rw \
   ghcr.io/almossaidllc/soketi-manager:latest
 ```
+
+**Note**: If you mount a local file that doesn't exist, the container will automatically create it with default values on first run!
 
 #### Option 2: Build from Source
 
@@ -278,6 +307,89 @@ The configuration file is mounted as a volume, so your apps persist across conta
 volumes:
   - ./soketi.json:/app/soketi.json:rw
 ```
+
+## 🔧 Troubleshooting
+
+### Error: "not a directory" or "mount failed" when running Docker
+
+**Problem**: You're getting an error like:
+```
+error mounting "/path/to/soketi.json" to rootfs at "/app/soketi.json": 
+not a directory: Are you trying to mount a directory onto a file (or vice-versa)?
+```
+
+**Solution**: This error occurs when:
+1. **The path exists as a directory instead of a file** (most common issue!)
+2. You're trying to mount a directory to a file path
+
+**Fix**: 
+- **Simplest solution**: Don't mount a volume at all! The container auto-initializes the config:
+  ```bash
+  docker run -d \
+    --name soketi-app-manager \
+    -p 3000:3000 \
+    -p 6001:6001 \
+    ghcr.io/almossaidllc/soketi-manager:latest
+  ```
+
+- **If you need persistence**: Use a named volume (recommended):
+  ```bash
+  docker run -d \
+    --name soketi-app-manager \
+    -p 3000:3000 \
+    -p 6001:6001 \
+    -v soketi-config:/app/soketi.json:rw \
+    ghcr.io/almossaidllc/soketi-manager:latest
+  ```
+
+- **If mounting a local file**: Remove the directory first if it exists:
+  ```bash
+  # Remove directory if it exists
+  rm -rf ./soketi.json
+  
+  # Run container (file will be auto-created if it doesn't exist)
+  docker run -d \
+    --name soketi-app-manager \
+    -p 3000:3000 \
+    -p 6001:6001 \
+    -v $(pwd)/soketi.json:/app/soketi.json:rw \
+    ghcr.io/almossaidllc/soketi-manager:latest
+  ```
+
+### Container exits immediately
+
+**Problem**: Container starts but exits right away.
+
+**Solution**: Check the logs:
+```bash
+docker logs soketi-app-manager
+```
+
+Common causes:
+- Port conflicts (3000 or 6001 already in use)
+- Configuration file errors
+- Missing dependencies
+
+### Can't access the web UI
+
+**Problem**: http://localhost:3000 doesn't load.
+
+**Solution**:
+1. Check if the container is running: `docker ps`
+2. Check port mapping: `docker port soketi-app-manager`
+3. Check firewall settings
+4. Try accessing via container IP: `docker inspect soketi-app-manager | grep IPAddress`
+
+### Apps not persisting after container restart
+
+**Problem**: Apps created via the web UI disappear after restarting the container.
+
+**Solution**: Ensure you're mounting the `soketi.json` file as a volume:
+```bash
+-v $(pwd)/soketi.json:/app/soketi.json:rw
+```
+
+Without this volume mount, changes are lost when the container stops.
 
 ## 🤝 Contributing
 

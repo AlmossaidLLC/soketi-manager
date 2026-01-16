@@ -4,13 +4,13 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: soketi-app-manager
-    entrypoint: ["node"]
-    command: ["/app-manager/start-services.js"]
     ports:
       - "3000:3000"  # App Manager
       - "6001:6001"  # Soketi WebSocket
     volumes:
-      - ./soketi.json:/app/soketi.json:rw
+      # Optional: Mount config file for persistence (auto-initialized if doesn't exist)
+      - soketi-config:/app/soketi.json:rw
+      # Optional: Mount public directory for custom UI files
       - ./public:/app-manager/public:ro
     environment:
       - NODE_ENV=production
