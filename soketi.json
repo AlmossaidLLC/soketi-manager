@@ -18,14 +18,6 @@
           "enabled": true,
           "enableClientMessages": true,
           "maxConnections": 100
-        },
-        {
-          "id": "Consequat In doloru",
-          "key": "Saepe sint error nos",
-          "secret": "Pa$$w0rd!",
-          "enabled": true,
-          "enableClientMessages": true,
-          "maxConnections": 41
         }
       ]
     }

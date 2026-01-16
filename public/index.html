@@ -120,6 +120,29 @@
                 @apply bg-background text-foreground;
             }
         }
+        
+        /* Loading spinner animation */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 1em;
+            height: 1em;
+            border: 2px solid currentColor;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            vertical-align: middle;
+            margin-right: 0.5em;
+        }
+        
+        .btn-loading {
+            opacity: 0.7;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body class="min-h-screen bg-background antialiased">
@@ -166,7 +189,10 @@
         <!-- Apps Grid -->
         <div id="apps-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div class="col-span-full flex items-center justify-center py-12">
-                <div class="text-muted-foreground">Loading apps...</div>
+                <div class="flex items-center gap-2 text-muted-foreground">
+                    <span class="spinner"></span>
+                    <span>Loading apps...</span>
+                </div>
             </div>
         </div>
     </div>
@@ -335,9 +361,56 @@
             return div.innerHTML;
         }
 
+        // Helper functions for button loading states
+        function setButtonLoading(button, isLoading) {
+            if (!button) return;
+            
+            if (isLoading) {
+                button.classList.add('btn-loading');
+                button.disabled = true;
+                // Store original HTML content if not already stored
+                if (!button.dataset.originalContent) {
+                    button.dataset.originalContent = button.innerHTML;
+                }
+                // Get text content (preserves emojis as they're Unicode)
+                const buttonText = button.textContent.trim() || 'Processing...';
+                button.innerHTML = '<span class="spinner"></span> ' + buttonText;
+            } else {
+                button.classList.remove('btn-loading');
+                button.disabled = false;
+                // Restore original content
+                if (button.dataset.originalContent) {
+                    button.innerHTML = button.dataset.originalContent;
+                    delete button.dataset.originalContent;
+                }
+            }
+        }
+
+        function getButtonByAction(action, appId) {
+            if (appId) {
+                return document.querySelector(`[data-action="${action}"][data-app-id="${appId}"]`);
+            }
+            return document.querySelector(`[onclick*="${action}"]`);
+        }
+
         let editingAppId = null;
 
         async function loadApps() {
+            const refreshBtn = document.querySelector('button[onclick="loadApps()"]');
+            const container = document.getElementById('apps-container');
+            setButtonLoading(refreshBtn, true);
+            
+            // Show loading state in container
+            const originalContent = container.innerHTML;
+            container.innerHTML = `
+                <div class="col-span-full flex items-center justify-center py-12">
+                    <div class="flex items-center gap-2 text-muted-foreground">
+                        <span class="spinner"></span>
+                        <span>Loading apps...</span>
+                    </div>
+                </div>
+            `;
+            
             try {
                 const response = await fetch('/api/apps');
                 const data = await response.json();
@@ -346,9 +419,13 @@
                     renderApps(data.apps);
                 } else {
                     showAlert('Error loading apps: ' + data.error, 'error');
+                    container.innerHTML = originalContent;
                 }
             } catch (error) {
                 showAlert('Failed to load apps: ' + error.message, 'error');
+                container.innerHTML = originalContent;
+            } finally {
+                setButtonLoading(refreshBtn, false);
             }
         }
 
@@ -444,6 +521,9 @@
         }
 
         async function editApp(appId) {
+            const editBtn = document.querySelector(`[data-action="edit"][data-app-id="${appId}"]`);
+            setButtonLoading(editBtn, true);
+            
             try {
                 const response = await fetch(`/api/apps/${appId}`);
                 const data = await response.json();
@@ -460,16 +540,22 @@
                     document.getElementById('enabled').checked = data.app.enabled !== false;
                     document.getElementById('enableClientMessages').checked = data.app.enableClientMessages !== false;
                     document.getElementById('appModal').classList.remove('hidden');
+                    setButtonLoading(editBtn, false);
                 } else {
                     showAlert('Error loading app: ' + data.error, 'error');
+                    setButtonLoading(editBtn, false);
                 }
             } catch (error) {
                 showAlert('Failed to load app: ' + error.message, 'error');
+                setButtonLoading(editBtn, false);
             }
         }
 
         async function saveApp(event) {
             event.preventDefault();
+            
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            setButtonLoading(submitBtn, true);
             
             const appData = {
                 id: document.getElementById('appId').value,
@@ -507,9 +593,11 @@
                     loadApps();
                 } else {
                     showAlert('Error: ' + data.error, 'error');
+                    setButtonLoading(submitBtn, false);
                 }
             } catch (error) {
                 showAlert('Failed to save app: ' + error.message, 'error');
+                setButtonLoading(submitBtn, false);
             }
         }
 
@@ -517,6 +605,9 @@
             if (!confirm(`Are you sure you want to delete app "${appId}"?`)) {
                 return;
             }
+
+            const deleteBtn = document.querySelector(`[data-action="delete"][data-app-id="${appId}"]`);
+            setButtonLoading(deleteBtn, true);
 
             try {
                 const response = await fetch(`/api/apps/${appId}`, {
@@ -532,13 +623,18 @@
                     loadApps();
                 } else {
                     showAlert('Error: ' + data.error, 'error');
+                    setButtonLoading(deleteBtn, false);
                 }
             } catch (error) {
                 showAlert('Failed to delete app: ' + error.message, 'error');
+                setButtonLoading(deleteBtn, false);
             }
         }
 
         async function restartSoketi() {
+            const restartBtn = document.querySelector('button[onclick="restartSoketi()"]');
+            setButtonLoading(restartBtn, true);
+            
             try {
                 const response = await fetch('/api/restart', {
                     method: 'POST'
@@ -552,6 +648,8 @@
                 }
             } catch (error) {
                 showAlert('Failed to restart Soketi: ' + error.message, 'error');
+            } finally {
+                setButtonLoading(restartBtn, false);
             }
         }
 
@@ -570,6 +668,9 @@
         let currentSDKAppKey = null;
 
         async function showSDKCode(appId, appKey) {
+            const sdkBtn = document.querySelector(`[data-action="sdk"][data-app-id="${appId}"]`);
+            setButtonLoading(sdkBtn, true);
+            
             try {
                 const response = await fetch(`/api/apps/${appId}`);
                 const data = await response.json();
@@ -580,11 +681,14 @@
                     document.getElementById('sdkAppInfo').textContent = `App ID: ${appId} | Key: ${appKey}`;
                     switchSDKTab('javascript');
                     document.getElementById('sdkModal').classList.remove('hidden');
+                    setButtonLoading(sdkBtn, false);
                 } else {
                     showAlert('Error loading app: ' + (data.error || 'App not found'), 'error');
+                    setButtonLoading(sdkBtn, false);
                 }
             } catch (error) {
                 showAlert('Failed to load app: ' + error.message, 'error');
+                setButtonLoading(sdkBtn, false);
             }
         }
 
@@ -765,20 +869,25 @@ $channels = $pusher->getChannels();
             }
         }
 
-        function copySDKCode() {
-            const code = document.getElementById('sdkCodeContent').textContent;
-            navigator.clipboard.writeText(code).then(() => {
-                const btn = document.getElementById('copyBtn');
-                const originalText = btn.textContent;
+        async function copySDKCode() {
+            const btn = document.getElementById('copyBtn');
+            const originalText = btn.textContent;
+            setButtonLoading(btn, true);
+            
+            try {
+                const code = document.getElementById('sdkCodeContent').textContent;
+                await navigator.clipboard.writeText(code);
+                setButtonLoading(btn, false);
                 btn.textContent = '✓ Copied!';
                 btn.classList.add('bg-green-600');
                 setTimeout(() => {
                     btn.textContent = originalText;
                     btn.classList.remove('bg-green-600');
                 }, 2000);
-            }).catch(err => {
+            } catch (err) {
+                setButtonLoading(btn, false);
                 showAlert('Failed to copy code: ' + err.message, 'error');
-            });
+            }
         }
 
         function closeSDKModal() {
