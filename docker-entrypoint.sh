@@ -1,15 +1,16 @@
 #!/bin/sh
 set -e
 
-CONFIG_FILE="/app/soketi.json"
+CONFIG_DIR="/app/config"
+CONFIG_FILE="$CONFIG_DIR/soketi.json"
 DEFAULT_CONFIG_FILE="/app/soketi.json.default"
 
 # If config file doesn't exist, initialize it with default config
 if [ ! -f "$CONFIG_FILE" ]; then
     echo "📝 Initializing soketi.json config file..."
     
-    # Ensure /app directory exists
-    mkdir -p /app
+    # Ensure config directory exists (volume mount point)
+    mkdir -p "$CONFIG_DIR"
     
     # Use default config file if it exists, otherwise create inline
     if [ -f "$DEFAULT_CONFIG_FILE" ]; then

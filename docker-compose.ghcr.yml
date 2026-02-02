@@ -10,14 +10,14 @@ services:
       - "6001:6001"  # Soketi WebSocket
     volumes:
       # Optional: Named volume for config persistence (auto-initialized if empty)
-      # To use a local file instead, replace with: ./soketi.json:/app/soketi.json:rw
-      - soketi-config:/app/soketi.json:rw
+      # To use a local file instead, replace with: ./soketi.json:/app/config/soketi.json:rw
+      - soketi-config:/app/config:rw
       # Optional: Mount public directory for custom UI files
       - ./public:/app-manager/public:ro
     environment:
       - NODE_ENV=production
       - SOKETI_APP_MANAGER_DRIVER=array
-      - SOKETI_CONFIG_FILE=/app/soketi.json
+      - SOKETI_CONFIG_FILE=/app/config/soketi.json
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/apps', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
@@ -29,4 +29,4 @@ services:
 volumes:
   soketi-config:
     # Named volume - config persists across container restarts
-    # To use a local file instead, replace with: ./soketi.json:/app/soketi.json:rw
+    # To use a local file instead, replace with: ./soketi.json:/app/config/soketi.json:rw

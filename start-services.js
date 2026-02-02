@@ -16,7 +16,8 @@ function startSoketi() {
   
   // Use the official Soketi server.js directly (from base image)
   const soketiScript = '/app/bin/server.js';
-  const soketiArgs = ['start', '--config', '/app/soketi.json'];
+  const configPath = process.env.SOKETI_CONFIG_FILE || '/app/config/soketi.json';
+  const soketiArgs = ['start', '--config', configPath];
   
   soketiProcess = spawn('node', [soketiScript, ...soketiArgs], {
     stdio: 'inherit',

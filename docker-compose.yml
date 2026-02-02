@@ -8,14 +8,14 @@ services:
       - "3000:3000"  # App Manager
       - "6001:6001"  # Soketi WebSocket
     volumes:
-      # Optional: Mount config file for persistence (auto-initialized if doesn't exist)
-      - soketi-config:/app/soketi.json:rw
+      # Mount config dir for persistence (named volumes are dirs, so we use /app/config)
+      - soketi-config:/app/config:rw
       # Optional: Mount public directory for custom UI files
       - ./public:/app-manager/public:ro
     environment:
       - NODE_ENV=production
       - SOKETI_APP_MANAGER_DRIVER=array
-      - SOKETI_CONFIG_FILE=/app/soketi.json
+      - SOKETI_CONFIG_FILE=/app/config/soketi.json
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/apps', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
@@ -23,3 +23,5 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+volumes:
+  soketi-config:
