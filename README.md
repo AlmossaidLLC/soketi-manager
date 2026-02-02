@@ -81,7 +81,8 @@ docker run -d \
   --name soketi-app-manager \
   -p 3000:3000 \
   -p 6001:6001 \
-  -v soketi-config:/app/soketi.json:rw \
+  -v soketi-config:/app/config:rw \
+  -e SOKETI_CONFIG_FILE=/app/config/soketi.json \
   ghcr.io/almossaidllc/soketi-manager:latest
 
 # Or mount a local file (if you want to edit it directly)
@@ -89,7 +90,8 @@ docker run -d \
   --name soketi-app-manager \
   -p 3000:3000 \
   -p 6001:6001 \
-  -v $(pwd)/soketi.json:/app/soketi.json:rw \
+  -v $(pwd)/soketi.json:/app/config/soketi.json:rw \
+  -e SOKETI_CONFIG_FILE=/app/config/soketi.json \
   ghcr.io/almossaidllc/soketi-manager:latest
 ```
 
@@ -253,7 +255,8 @@ docker run -d \
   --restart unless-stopped \
   -p 3000:3000 \
   -p 6001:6001 \
-  -v /path/to/soketi.json:/app/soketi.json:rw \
+  -v /path/to/soketi.json:/app/config/soketi.json:rw \
+  -e SOKETI_CONFIG_FILE=/app/config/soketi.json \
   ghcr.io/almossaidllc/soketi-manager:latest
 ```
 
@@ -272,7 +275,7 @@ You can customize the deployment using environment variables:
 environment:
   - NODE_ENV=production
   - SOKETI_APP_MANAGER_DRIVER=array
-  - SOKETI_CONFIG_FILE=/app/soketi.json
+  - SOKETI_CONFIG_FILE=/app/config/soketi.json
 ```
 
 ### Docker Compose Override
@@ -305,16 +308,26 @@ The configuration file is mounted as a volume, so your apps persist across conta
 
 ```yaml
 volumes:
-  - ./soketi.json:/app/soketi.json:rw
+  - ./soketi.json:/app/config/soketi.json:rw
 ```
 
 ## 🔧 Troubleshooting
+
+### Error: "EISDIR: illegal operation on a directory, read" when loading apps
+
+**Problem**: The App Manager shows "Error loading apps: EISDIR: illegal operation on a directory, read".
+
+**Solution**: This occurs when a named volume was mounted at a file path (e.g. `soketi-config:/app/soketi.json`). Docker named volumes are always directories, so the path became a directory instead of a file. We now mount to `/app/config` and use `/app/config/soketi.json` for the config file.
+
+**Fix**: 
+1. Remove the old volume: `docker volume rm soketi-config` (if it exists)
+2. Recreate the container with the updated compose/run command
 
 ### Error: "not a directory" or "mount failed" when running Docker
 
 **Problem**: You're getting an error like:
 ```
-error mounting "/path/to/soketi.json" to rootfs at "/app/soketi.json": 
+error mounting "/path/to/soketi.json" to rootfs at "/app/config/soketi.json": 
 not a directory: Are you trying to mount a directory onto a file (or vice-versa)?
 ```
 
@@ -338,7 +351,8 @@ not a directory: Are you trying to mount a directory onto a file (or vice-versa)
     --name soketi-app-manager \
     -p 3000:3000 \
     -p 6001:6001 \
-    -v soketi-config:/app/soketi.json:rw \
+    -v soketi-config:/app/config:rw \
+    -e SOKETI_CONFIG_FILE=/app/config/soketi.json \
     ghcr.io/almossaidllc/soketi-manager:latest
   ```
 
@@ -352,7 +366,8 @@ not a directory: Are you trying to mount a directory onto a file (or vice-versa)
     --name soketi-app-manager \
     -p 3000:3000 \
     -p 6001:6001 \
-    -v $(pwd)/soketi.json:/app/soketi.json:rw \
+    -v $(pwd)/soketi.json:/app/config/soketi.json:rw \
+    -e SOKETI_CONFIG_FILE=/app/config/soketi.json \
     ghcr.io/almossaidllc/soketi-manager:latest
   ```
 
@@ -384,9 +399,13 @@ Common causes:
 
 **Problem**: Apps created via the web UI disappear after restarting the container.
 
-**Solution**: Ensure you're mounting the `soketi.json` file as a volume:
+**Solution**: Ensure you're mounting the config directory or file as a volume:
 ```bash
--v $(pwd)/soketi.json:/app/soketi.json:rw
+# Named volume (recommended)
+-v soketi-config:/app/config:rw -e SOKETI_CONFIG_FILE=/app/config/soketi.json
+
+# Or local file
+-v $(pwd)/soketi.json:/app/config/soketi.json:rw -e SOKETI_CONFIG_FILE=/app/config/soketi.json
 ```
 
 Without this volume mount, changes are lost when the container stops.

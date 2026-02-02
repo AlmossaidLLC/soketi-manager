@@ -13,8 +13,8 @@ function getConfigPath() {
         return process.env.SOKETI_CONFIG_FILE;
     }
     
-    // Check Docker path first
-    const dockerPath = '/app/soketi.json';
+    // Check Docker path first (config dir for volume-mounted persistence)
+    const dockerPath = '/app/config/soketi.json';
     if (existsSync(dockerPath)) {
         return dockerPath;
     }
@@ -34,6 +34,8 @@ if (process.env.NODE_ENV !== 'production') {
   console.log(`📁 Using config file: ${CONFIG_FILE}`);
 }
 
+const FALLBACK_DEFAULT_PATH = '/app/soketi.json.default';
+
 // Helper function to read config
 export async function readConfig() {
   try {
@@ -41,6 +43,17 @@ export async function readConfig() {
     return JSON.parse(data);
   } catch (error) {
     if (error.code === 'ENOENT') {
+      // Try to initialize from default (handles Docker volume mount timing)
+      if (existsSync(FALLBACK_DEFAULT_PATH)) {
+        try {
+          await fs.mkdir(path.dirname(CONFIG_FILE), { recursive: true });
+          await fs.copyFile(FALLBACK_DEFAULT_PATH, CONFIG_FILE);
+          const data = await fs.readFile(CONFIG_FILE, 'utf-8');
+          return JSON.parse(data);
+        } catch (initErr) {
+          console.error('Failed to initialize config from default:', initErr.message);
+        }
+      }
       throw new Error(`Config file not found at: ${CONFIG_FILE}. Please ensure soketi.json exists.`);
     }
     throw error;
