@@ -1,0 +1,43 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="95" fill="url(#gradient)" opacity="0.9"/>
+  
+  <!-- Gradient definition -->
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="signalGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#e0e7ff;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Central hub -->
+  <circle cx="100" cy="100" r="25" fill="white" opacity="0.95"/>
+  <circle cx="100" cy="100" r="18" fill="url(#gradient)"/>
+  
+  <!-- Connection nodes -->
+  <circle cx="50" cy="50" r="12" fill="white" opacity="0.9"/>
+  <circle cx="150" cy="50" r="12" fill="white" opacity="0.9"/>
+  <circle cx="50" cy="150" r="12" fill="white" opacity="0.9"/>
+  <circle cx="150" cy="150" r="12" fill="white" opacity="0.9"/>
+  
+  <!-- Connection lines with pulse effect -->
+  <line x1="100" y1="100" x2="50" y2="50" stroke="url(#signalGradient)" stroke-width="3" opacity="0.6" stroke-linecap="round"/>
+  <line x1="100" y1="100" x2="150" y2="50" stroke="url(#signalGradient)" stroke-width="3" opacity="0.6" stroke-linecap="round"/>
+  <line x1="100" y1="100" x2="50" y2="150" stroke="url(#signalGradient)" stroke-width="3" opacity="0.6" stroke-linecap="round"/>
+  <line x1="100" y1="100" x2="150" y2="150" stroke="url(#signalGradient)" stroke-width="3" opacity="0.6" stroke-linecap="round"/>
+  
+  <!-- Signal waves -->
+  <circle cx="100" cy="100" r="35" fill="none" stroke="white" stroke-width="2" opacity="0.3"/>
+  <circle cx="100" cy="100" r="50" fill="none" stroke="white" stroke-width="2" opacity="0.2"/>
+  <circle cx="100" cy="100" r="65" fill="none" stroke="white" stroke-width="1.5" opacity="0.15"/>
+  
+  <!-- Small dots on nodes for activity -->
+  <circle cx="50" cy="50" r="4" fill="#6366f1"/>
+  <circle cx="150" cy="50" r="4" fill="#6366f1"/>
+  <circle cx="50" cy="150" r="4" fill="#6366f1"/>
+  <circle cx="150" cy="150" r="4" fill="#6366f1"/>
+</svg>

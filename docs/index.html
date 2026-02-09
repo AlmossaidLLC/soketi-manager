@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soketi App Manager - Open-Source Pusher Alternative with Multi-App Management</title>
+    <meta name="description" content="Self-hosted, open-source alternative to Pusher, Ably & Socket.io. Manage multiple WebSocket apps from a single Docker container with a beautiful web UI.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/php.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        border: "hsl(217.2 32.6% 17.5%)",
+                        input: "hsl(217.2 32.6% 17.5%)",
+                        ring: "hsl(212.7 26.8% 83.9%)",
+                        background: "hsl(222.2 84% 4.9%)",
+                        foreground: "hsl(210 40% 98%)",
+                        primary: {
+                            DEFAULT: "hsl(210 40% 98%)",
+                            foreground: "hsl(222.2 47.4% 11.2%)",
+                        },
+                        secondary: {
+                            DEFAULT: "hsl(217.2 32.6% 17.5%)",
+                            foreground: "hsl(210 40% 98%)",
+                        },
+                        muted: {
+                            DEFAULT: "hsl(217.2 32.6% 17.5%)",
+                            foreground: "hsl(215 20.2% 65.1%)",
+                        },
+                    },
+                },
+            },
+        }
+    </script>
+    <style>
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .feature-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+        .feature-card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(102, 126, 234, 0.15); }
+        .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); transition: all 0.3s ease; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3); }
+        .code-tab { cursor: pointer; transition: all 0.2s ease; }
+        .code-tab.active { border-color: #667eea; color: #fff; background: rgba(102, 126, 234, 0.15); }
+        .code-tab:not(.active):hover { background: rgba(102, 126, 234, 0.08); }
+        .code-block { display: none; }
+        .code-block.active { display: block; }
+        pre code.hljs { background: hsl(222.2 84% 4.9%) !important; border-radius: 0.75rem; padding: 1.5rem !important; font-size: 0.875rem; line-height: 1.6; }
+        .comparison-card { transition: transform 0.3s ease; }
+        .comparison-card:hover { transform: translateY(-2px); }
+        .pill { display: inline-flex; align-items: center; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; }
+        .pill-green { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
+        .pill-red { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+        .pill-yellow { background: rgba(234, 179, 8, 0.15); color: #eab308; }
+        .pill-blue { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+        .app-card { background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%); }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        .float-anim { animation: float 6s ease-in-out infinite; }
+    </style>
+</head>
+<body class="dark bg-background text-foreground">
+    <!-- Navigation -->
+    <nav class="fixed top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-3">
+                    <!-- <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg> -->
+                    <img src="logo.svg" class="w-8 h-8" alt="">
+                    <span class="text-xl font-bold">Soketi Manager</span>
+                </div>
+                <!-- Mobile menu button -->
+                <button id="mobileMenuBtn" class="md:hidden p-2 rounded-lg hover:bg-secondary/50">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                </button>
+                <div class="hidden md:flex items-center space-x-6">
+                    <a href="#features" class="text-muted-foreground hover:text-foreground transition">Features</a>
+                    <a href="#why-switch" class="text-muted-foreground hover:text-foreground transition">Why Switch</a>
+                    <a href="#multi-app" class="text-muted-foreground hover:text-foreground transition">Multi-App</a>
+                    <a href="#code" class="text-muted-foreground hover:text-foreground transition">Code</a>
+                    <a href="#quickstart" class="text-muted-foreground hover:text-foreground transition">Quick Start</a>
+                    <a href="https://github.com/AlmossaidLLC/soketi-manager" target="_blank" rel="noopener noreferrer" class="text-muted-foreground hover:text-foreground transition flex items-center gap-1">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                        GitHub
+                    </a>
+                    <a href="./index.html" class="btn-primary px-5 py-2 rounded-lg text-primary-foreground font-medium text-sm">Launch Manager</a>
+                </div>
+            </div>
+            <!-- Mobile menu -->
+            <div id="mobileMenu" class="hidden md:hidden pb-4 space-y-2">
+                <a href="#features" class="block px-3 py-2 rounded-lg text-muted-foreground hover:bg-secondary/50 transition">Features</a>
+                <a href="#why-switch" class="block px-3 py-2 rounded-lg text-muted-foreground hover:bg-secondary/50 transition">Why Switch</a>
+                <a href="#multi-app" class="block px-3 py-2 rounded-lg text-muted-foreground hover:bg-secondary/50 transition">Multi-App</a>
+                <a href="#code" class="block px-3 py-2 rounded-lg text-muted-foreground hover:bg-secondary/50 transition">Code</a>
+                <a href="#quickstart" class="block px-3 py-2 rounded-lg text-muted-foreground hover:bg-secondary/50 transition">Quick Start</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ===================== HERO ===================== -->
+    <section class="pt-32 pb-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+        <!-- Background decoration -->
+        <div class="absolute inset-0 overflow-hidden pointer-events-none">
+            <div class="absolute -top-40 -right-40 w-80 h-80 bg-purple-600/10 rounded-full blur-3xl float-anim"></div>
+            <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl float-anim" style="animation-delay: 3s;"></div>
+        </div>
+        <div class="max-w-7xl mx-auto text-center relative z-10">
+            <div class="inline-flex items-center gap-2 px-4 py-1.5 bg-secondary/50 border border-border rounded-full text-sm text-muted-foreground mb-8">
+                <span class="pill pill-green">Open Source</span>
+                Self-hosted Pusher alternative
+            </div>
+            <h1 class="text-5xl sm:text-7xl font-bold mb-6 leading-tight">
+                The Open-Source<br>
+                <span class="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-500 to-purple-600">Pusher Alternative</span>
+            </h1>
+            <p class="text-xl text-muted-foreground mb-10 max-w-3xl mx-auto leading-relaxed">
+                Manage <strong class="text-foreground">multiple WebSocket applications</strong> from a single Docker container. Drop-in replacement for Pusher, Ably & hosted WebSocket services &mdash; with <strong class="text-foreground">zero monthly fees</strong>.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center mb-16">
+                <a href="#quickstart" class="btn-primary px-8 py-3.5 rounded-xl text-primary-foreground font-semibold inline-flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    Get Started Free
+                </a>
+                <a href="https://github.com/AlmossaidLLC/soketi-manager" target="_blank" class="px-8 py-3.5 rounded-xl border-2 border-border hover:border-foreground/30 hover:bg-secondary/50 font-semibold inline-flex items-center justify-center gap-2 transition">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                    Star on GitHub
+                </a>
+            </div>
+
+            <!-- Stats -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-6 max-w-4xl mx-auto">
+                <div class="p-6 bg-secondary/30 rounded-xl border border-border">
+                    <div class="text-3xl font-bold text-foreground mb-1">$0</div>
+                    <p class="text-sm text-muted-foreground">Monthly Cost</p>
+                </div>
+                <div class="p-6 bg-secondary/30 rounded-xl border border-border">
+                    <div class="text-3xl font-bold text-foreground mb-1">&infin;</div>
+                    <p class="text-sm text-muted-foreground">Apps & Connections</p>
+                </div>
+                <div class="p-6 bg-secondary/30 rounded-xl border border-border">
+                    <div class="text-3xl font-bold text-foreground mb-1">1</div>
+                    <p class="text-sm text-muted-foreground">Docker Container</p>
+                </div>
+                <div class="p-6 bg-secondary/30 rounded-xl border border-border">
+                    <div class="text-3xl font-bold text-foreground mb-1">100%</div>
+                    <p class="text-sm text-muted-foreground">Pusher Compatible</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===================== WHY SWITCH (Comparison) ===================== -->
+    <section id="why-switch" class="py-20 px-4 sm:px-6 lg:px-8 bg-secondary/10">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-16">
+                <span class="pill pill-blue mb-4">Drop-in Replacement</span>
+                <h2 class="text-4xl font-bold mb-4 mt-4">Why Switch from Pusher?</h2>
+                <p class="text-muted-foreground text-lg max-w-3xl mx-auto">
+                    Soketi Manager is a <strong class="text-foreground">self-hosted, open-source</strong> alternative to Pusher, Ably, and other hosted WebSocket services.
+                    Use the same Pusher SDKs you already know &mdash; just point them at your own server.
+                </p>
+            </div>
+
+            <!-- Comparison Table -->
+            <div class="max-w-5xl mx-auto overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="border-b border-border">
+                            <th class="py-4 px-4 text-muted-foreground font-medium text-sm">Feature</th>
+                            <th class="py-4 px-6 text-center">
+                                <div class="flex flex-col items-center gap-1">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                    <span class="font-semibold">Soketi Manager</span>
+                                </div>
+                            </th>
+                            <th class="py-4 px-6 text-center">
+                                <span class="font-semibold text-muted-foreground">Pusher</span>
+                            </th>
+                            <th class="py-4 px-6 text-center">
+                                <span class="font-semibold text-muted-foreground">Ably</span>
+                            </th>
+                            <th class="py-4 px-6 text-center">
+                                <span class="font-semibold text-muted-foreground">Socket.io</span>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-sm">
+                        <tr class="border-b border-border/50">
+                            <td class="py-4 px-4 font-medium">Pricing</td>
+                            <td class="py-4 px-6 text-center"><span class="pill pill-green">Free Forever</span></td>
+                            <td class="py-4 px-6 text-center"><span class="pill pill-red">$49+/mo</span></td>
+                            <td class="py-4 px-6 text-center"><span class="pill pill-red">$29+/mo</span></td>
+                            <td class="py-4 px-6 text-center"><span class="pill pill-green">Free</span></td>
+                        </tr>
+                        <tr class="border-b border-border/50">
+                            <td class="py-4 px-4 font-medium">Self-hosted</td>
+                            <td class="py-4 px-6 text-center"><span class="text-green-500">&#10003;</span></td>
+                            <td class="py-4 px-6 text-center"><span class="text-red-500">&#10007;</span></td>
+                            <td class="py-4 px-6 text-center"><span class="text-red-500">&#10007;</span></td>
+                            <td class="py-4 px-6 text-center"><span class="text-green-500">&#10003;</span></td>
+                        </tr>
+                        <tr class="border-b border-border/50">
+                            <td class="py-4 px-4 font-medium">Multi-App Management UI</td>
+                            <td class="py-4 px-6 text-center"><span class="text-green-500">&#10003;</span></td>
+                            <td class="py-4 px-6 text-center"><span class="text-green-500">&#10003;</span></td>
+                            <td class="py-4 px-6 text-center"><span class="text-green-500">&#10003;</span></td>
+                            <td class="py-4 px-6 text-center"><span class="text-red-500">&#10007;</span></td>
+                        </tr>
+                        <tr class="border-b border-border/50">
+                            <td class="py-4 px-4 font-medium">Pusher SDK Compatible</td>
+                            <td class="py-4 px-6 text-center"><span class="text-green-500">&#10003;</span></td>
+                            <td class="py-4 px-6 text-center"><span class="text-green-500">&#10003;</span></td>
+                            <td class="py-4 px-6 text-center"><span class="text-yellow-500">Partial</span></td>
+                            <td class="py-4 px-6 text-center"><span class="text-red-500">&#10007;</span></td>
+                        </tr>
+                        <tr class="border-b border-border/50">
+                            <td class="py-4 px-4 font-medium">Connection Limits</td>
+                            <td class="py-4 px-6 text-center"><span class="pill pill-green">Unlimited</span></td>
+                            <td class="py-4 px-6 text-center"><span class="pill pill-yellow">Plan-based</span></td>
+                            <td class="py-4 px-6 text-center"><span class="pill pill-yellow">Plan-based</span></td>
+                            <td class="py-4 px-6 text-center"><span class="pill pill-green">Unlimited</span></td>
+                        </tr>
+                        <tr class="border-b border-border/50">
+                            <td class="py-4 px-4 font-medium">Message Limits</td>
+                            <td class="py-4 px-6 text-center"><span class="pill pill-green">Unlimited</span></td>
+                            <td class="py-4 px-6 text-center"><span class="pill pill-red">200k-50M</span></td>
+                            <td class="py-4 px-6 text-center"><span class="pill pill-red">6M-50M</span></td>
+                            <td class="py-4 px-6 text-center"><span class="pill pill-green">Unlimited</span></td>
+                        </tr>
+                        <tr class="border-b border-border/50">
+                            <td class="py-4 px-4 font-medium">WebSocket Playground</td>
+                            <td class="py-4 px-6 text-center"><span class="text-green-500">&#10003; Built-in</span></td>
+                            <td class="py-4 px-6 text-center"><span class="text-green-500">&#10003; Debug Console</span></td>
+                            <td class="py-4 px-6 text-center"><span class="text-red-500">&#10007;</span></td>
+                            <td class="py-4 px-6 text-center"><span class="text-red-500">&#10007;</span></td>
+                        </tr>
+                        <tr class="border-b border-border/50">
+                            <td class="py-4 px-4 font-medium">Data Sovereignty</td>
+                            <td class="py-4 px-6 text-center"><span class="pill pill-green">Your Servers</span></td>
+                            <td class="py-4 px-6 text-center"><span class="pill pill-yellow">Their Cloud</span></td>
+                            <td class="py-4 px-6 text-center"><span class="pill pill-yellow">Their Cloud</span></td>
+                            <td class="py-4 px-6 text-center"><span class="pill pill-green">Your Servers</span></td>
+                        </tr>
+                        <tr>
+                            <td class="py-4 px-4 font-medium">Setup Complexity</td>
+                            <td class="py-4 px-6 text-center"><span class="pill pill-green">1 command</span></td>
+                            <td class="py-4 px-6 text-center"><span class="pill pill-green">SaaS</span></td>
+                            <td class="py-4 px-6 text-center"><span class="pill pill-green">SaaS</span></td>
+                            <td class="py-4 px-6 text-center"><span class="pill pill-yellow">DIY</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="text-center mt-10">
+                <p class="text-muted-foreground text-sm">Soketi Manager uses <a href="https://soketi.app/" target="_blank" class="text-purple-400 hover:text-purple-300 underline">Soketi</a> under the hood &mdash; a Pusher-compatible WebSocket server written in C++ for maximum performance.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===================== MULTI-APP MANAGEMENT ===================== -->
+    <section id="multi-app" class="py-20 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-16">
+                <span class="pill pill-blue mb-4">Multi-Tenant</span>
+                <h2 class="text-4xl font-bold mb-4 mt-4">One Server, Unlimited Apps</h2>
+                <p class="text-muted-foreground text-lg max-w-3xl mx-auto">
+                    Manage multiple isolated WebSocket applications from a single deployment. Each app gets its own credentials, channels, and configuration &mdash; perfect for multi-tenant SaaS, microservices, or running dev/staging/production environments side by side.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+                <!-- Visual: App Cards -->
+                <div class="space-y-4">
+                    <div class="app-card p-6 rounded-xl border border-border">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center"><span class="text-blue-400 font-bold">C</span></div>
+                                <div>
+                                    <h4 class="font-semibold">Chat Application</h4>
+                                    <p class="text-xs text-muted-foreground">ID: chat-app-2024</p>
+                                </div>
+                            </div>
+                            <span class="pill pill-green">Active</span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-3 text-xs">
+                            <div class="bg-background/50 rounded-lg p-2 text-center"><span class="text-muted-foreground block">Key</span><span class="font-mono">chat-key-***</span></div>
+                            <div class="bg-background/50 rounded-lg p-2 text-center"><span class="text-muted-foreground block">Channels</span><span>Unlimited</span></div>
+                            <div class="bg-background/50 rounded-lg p-2 text-center"><span class="text-muted-foreground block">Clients</span><span>Enabled</span></div>
+                        </div>
+                    </div>
+                    <div class="app-card p-6 rounded-xl border border-border">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center"><span class="text-green-400 font-bold">E</span></div>
+                                <div>
+                                    <h4 class="font-semibold">E-Commerce Notifications</h4>
+                                    <p class="text-xs text-muted-foreground">ID: ecommerce-prod</p>
+                                </div>
+                            </div>
+                            <span class="pill pill-green">Active</span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-3 text-xs">
+                            <div class="bg-background/50 rounded-lg p-2 text-center"><span class="text-muted-foreground block">Key</span><span class="font-mono">ecom-key-***</span></div>
+                            <div class="bg-background/50 rounded-lg p-2 text-center"><span class="text-muted-foreground block">Channels</span><span>Unlimited</span></div>
+                            <div class="bg-background/50 rounded-lg p-2 text-center"><span class="text-muted-foreground block">Clients</span><span>Enabled</span></div>
+                        </div>
+                    </div>
+                    <div class="app-card p-6 rounded-xl border border-border">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center"><span class="text-purple-400 font-bold">D</span></div>
+                                <div>
+                                    <h4 class="font-semibold">Dashboard Live Updates</h4>
+                                    <p class="text-xs text-muted-foreground">ID: dashboard-v2</p>
+                                </div>
+                            </div>
+                            <span class="pill pill-green">Active</span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-3 text-xs">
+                            <div class="bg-background/50 rounded-lg p-2 text-center"><span class="text-muted-foreground block">Key</span><span class="font-mono">dash-key-***</span></div>
+                            <div class="bg-background/50 rounded-lg p-2 text-center"><span class="text-muted-foreground block">Channels</span><span>Unlimited</span></div>
+                            <div class="bg-background/50 rounded-lg p-2 text-center"><span class="text-muted-foreground block">Clients</span><span>Enabled</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Benefits list -->
+                <div class="space-y-6">
+                    <div class="flex gap-4">
+                        <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-green-500/15 flex items-center justify-center"><svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></div>
+                        <div>
+                            <h4 class="font-semibold mb-1">Isolated Credentials per App</h4>
+                            <p class="text-muted-foreground text-sm">Each application gets its own App ID, Key, and Secret. Complete tenant isolation without separate infrastructure.</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-4">
+                        <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-green-500/15 flex items-center justify-center"><svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></div>
+                        <div>
+                            <h4 class="font-semibold mb-1">Create & Manage via Web UI</h4>
+                            <p class="text-muted-foreground text-sm">No need to edit JSON files. Add, edit, or remove apps from the built-in dashboard. Changes apply instantly.</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-4">
+                        <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-green-500/15 flex items-center justify-center"><svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></div>
+                        <div>
+                            <h4 class="font-semibold mb-1">REST API for Automation</h4>
+                            <p class="text-muted-foreground text-sm">Automate app provisioning with the built-in REST API. Perfect for CI/CD pipelines and dynamic tenant onboarding.</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-4">
+                        <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-green-500/15 flex items-center justify-center"><svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></div>
+                        <div>
+                            <h4 class="font-semibold mb-1">Built-in Testing Playground</h4>
+                            <p class="text-muted-foreground text-sm">Test any app's WebSocket connection in real-time with the interactive playground. Send and receive events instantly.</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-4">
+                        <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-green-500/15 flex items-center justify-center"><svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></div>
+                        <div>
+                            <h4 class="font-semibold mb-1">Hot Reload on Config Changes</h4>
+                            <p class="text-muted-foreground text-sm">Soketi restarts automatically when you add or update apps. Zero downtime management.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===================== FEATURES ===================== -->
+    <section id="features" class="py-20 px-4 sm:px-6 lg:px-8 bg-secondary/20">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold mb-4">Powerful Features</h2>
+                <p class="text-muted-foreground text-lg max-w-2xl mx-auto">
+                    Everything you need to manage WebSocket applications in production
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="feature-card p-8 bg-secondary/50 rounded-xl border border-border">
+                    <div class="w-12 h-12 bg-blue-500/15 rounded-lg flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Single Docker Image</h3>
+                    <p class="text-muted-foreground">Both Soketi and App Manager in one container. Deploy once, manage everything.</p>
+                </div>
+                <div class="feature-card p-8 bg-secondary/50 rounded-xl border border-border">
+                    <div class="w-12 h-12 bg-green-500/15 rounded-lg flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Pusher Protocol Compatible</h3>
+                    <p class="text-muted-foreground">Use existing Pusher SDKs in any language. Just change the host &mdash; your code stays the same.</p>
+                </div>
+                <div class="feature-card p-8 bg-secondary/50 rounded-xl border border-border">
+                    <div class="w-12 h-12 bg-purple-500/15 rounded-lg flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Multi-App Dashboard</h3>
+                    <p class="text-muted-foreground">Create and manage unlimited apps from a beautiful web interface. Perfect for multi-tenant deployments.</p>
+                </div>
+                <div class="feature-card p-8 bg-secondary/50 rounded-xl border border-border">
+                    <div class="w-12 h-12 bg-yellow-500/15 rounded-lg flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Interactive Playground</h3>
+                    <p class="text-muted-foreground">Test any app's WebSocket connection live. Send and receive events in real-time for instant debugging.</p>
+                </div>
+                <div class="feature-card p-8 bg-secondary/50 rounded-xl border border-border">
+                    <div class="w-12 h-12 bg-red-500/15 rounded-lg flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Production Ready</h3>
+                    <p class="text-muted-foreground">Health checks, auto-restart, and proper process management. Battle-tested for production workloads.</p>
+                </div>
+                <div class="feature-card p-8 bg-secondary/50 rounded-xl border border-border">
+                    <div class="w-12 h-12 bg-teal-500/15 rounded-lg flex items-center justify-center mb-4">
+                        <svg class="w-6 h-6 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    </div>
+                    <h3 class="text-xl font-semibold mb-2">Zero Configuration</h3>
+                    <p class="text-muted-foreground">One command to deploy. Config auto-initializes. No YAML, no ENV files, no hassle.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===================== CODE EXAMPLES ===================== -->
+    <section id="code" class="py-20 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-6xl mx-auto">
+            <div class="text-center mb-16">
+                <span class="pill pill-blue mb-4">Pusher SDK Compatible</span>
+                <h2 class="text-4xl font-bold mb-4 mt-4">Use It in Your Code</h2>
+                <p class="text-muted-foreground text-lg max-w-3xl mx-auto">
+                    Soketi Manager is <strong class="text-foreground">100% compatible with Pusher SDKs</strong>. If you're already using Pusher, just change the host. If you're starting fresh, pick your language and copy-paste.
+                </p>
+            </div>
+
+            <!-- Server-Side Code -->
+            <div class="mb-16">
+                <h3 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-purple-500/15 flex items-center justify-center"><svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2"/></svg></div>
+                    Server-Side &mdash; Trigger Events
+                </h3>
+
+                <!-- Tabs -->
+                <div class="flex flex-wrap gap-2 mb-4">
+                    <button class="code-tab active px-4 py-2 rounded-lg border border-border text-sm font-medium" data-target="server-node">Node.js</button>
+                    <button class="code-tab px-4 py-2 rounded-lg border border-border text-sm font-medium" data-target="server-php">PHP / Laravel</button>
+                    <button class="code-tab px-4 py-2 rounded-lg border border-border text-sm font-medium" data-target="server-python">Python</button>
+                    <button class="code-tab px-4 py-2 rounded-lg border border-border text-sm font-medium" data-target="server-curl">cURL</button>
+                </div>
+
+                <!-- Code Blocks -->
+                <div id="server-node" class="code-block active">
+                    <pre><code class="language-javascript">import Pusher from "pusher";
+
+// Initialize the Pusher server SDK pointing to your Soketi instance
+const pusher = new Pusher({
+  appId: "my-chat-app",          // Your app ID from the Manager UI
+  key: "app-key",
+  secret: "app-secret",
+  host: "your-server.com",       // Your Soketi Manager host
+  port: "6001",
+  useTLS: false,
+  cluster: "mt1",               // Required but unused for Soketi
+});
+
+// Trigger an event on a channel
+await pusher.trigger("notifications", "order-placed", {
+  orderId: "ORD-12345",
+  message: "Your order has been placed!",
+  amount: 59.99,
+});
+
+// Trigger to multiple channels at once
+await pusher.trigger(
+  ["notifications", "admin-dashboard"],
+  "new-user",
+  { username: "john_doe", plan: "premium" }
+);</code></pre>
+                </div>
+
+                <div id="server-php" class="code-block">
+                    <pre><code class="language-php">&lt;?php
+// Using the Pusher PHP SDK (works with Laravel Broadcasting too)
+use Pusher\Pusher;
+
+$pusher = new Pusher(
+    'app-key',
+    'app-secret',
+    'my-chat-app',
+    [
+        'host'    =&gt; 'your-server.com',
+        'port'    =&gt; 6001,
+        'scheme'  =&gt; 'http',
+        'cluster' =&gt; 'mt1',
+    ]
+);
+
+// Trigger an event
+$pusher-&gt;trigger('notifications', 'order-placed', [
+    'orderId' =&gt; 'ORD-12345',
+    'message' =&gt; 'Your order has been placed!',
+]);
+
+// --- Laravel Broadcasting (config/broadcasting.php) ---
+'pusher' =&gt; [
+    'driver'  =&gt; 'pusher',
+    'key'     =&gt; env('PUSHER_APP_KEY', 'app-key'),
+    'secret'  =&gt; env('PUSHER_APP_SECRET', 'app-secret'),
+    'app_id'  =&gt; env('PUSHER_APP_ID', 'my-chat-app'),
+    'options' =&gt; [
+        'host'   =&gt; env('PUSHER_HOST', 'your-server.com'),
+        'port'   =&gt; env('PUSHER_PORT', 6001),
+        'scheme' =&gt; env('PUSHER_SCHEME', 'http'),
+    ],
+],</code></pre>
+                </div>
+
+                <div id="server-python" class="code-block">
+                    <pre><code class="language-python">import pusher
+
+# Initialize the Pusher client pointing to your Soketi instance
+pusher_client = pusher.Pusher(
+    app_id="my-chat-app",
+    key="app-key",
+    secret="app-secret",
+    host="your-server.com",
+    port=6001,
+    ssl=False,
+    cluster="mt1",
+)
+
+# Trigger an event
+pusher_client.trigger("notifications", "order-placed", {
+    "orderId": "ORD-12345",
+    "message": "Your order has been placed!",
+    "amount": 59.99,
+})
+
+# Trigger on multiple channels
+pusher_client.trigger(
+    ["notifications", "admin-dashboard"],
+    "new-user",
+    {"username": "john_doe", "plan": "premium"}
+)</code></pre>
+                </div>
+
+                <div id="server-curl" class="code-block">
+                    <pre><code class="language-bash"># Use the built-in REST API to send events (no SDK needed!)
+curl -X POST http://your-server.com:3000/api/send-event \
+  -H "Content-Type: application/json" \
+  -d '{
+    "appId": "my-chat-app",
+    "channel": "notifications",
+    "event": "order-placed",
+    "data": {
+      "orderId": "ORD-12345",
+      "message": "Your order has been placed!"
+    }
+  }'
+
+# Create a new app via the REST API
+curl -X POST http://your-server.com:3000/api/apps \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "new-app",
+    "key": "new-app-key",
+    "secret": "new-app-secret"
+  }'
+
+# List all apps
+curl http://your-server.com:3000/api/apps</code></pre>
+                </div>
+            </div>
+
+            <!-- Client-Side Code -->
+            <div>
+                <h3 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center"><svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg></div>
+                    Client-Side &mdash; Listen for Events
+                </h3>
+
+                <div class="flex flex-wrap gap-2 mb-4">
+                    <button class="code-tab active px-4 py-2 rounded-lg border border-border text-sm font-medium" data-target="client-js">JavaScript</button>
+                    <button class="code-tab px-4 py-2 rounded-lg border border-border text-sm font-medium" data-target="client-react">React</button>
+                    <button class="code-tab px-4 py-2 rounded-lg border border-border text-sm font-medium" data-target="client-vue">Vue.js</button>
+                </div>
+
+                <div id="client-js" class="code-block active">
+                    <pre><code class="language-javascript">import Pusher from "pusher-js";
+
+// Connect to your Soketi instance
+const pusher = new Pusher("app-key", {
+  wsHost: "your-server.com",
+  wsPort: 6001,
+  forceTLS: false,
+  disableStats: true,
+  enabledTransports: ["ws", "wss"],
+  cluster: "mt1",
+});
+
+// Subscribe to a channel
+const channel = pusher.subscribe("notifications");
+
+// Listen for events
+channel.bind("order-placed", (data) => {
+  console.log("New order:", data.orderId);
+  showNotification(data.message);
+});
+
+// Listen for multiple events on the same channel
+channel.bind("new-user", (data) => {
+  console.log("New user registered:", data.username);
+});
+
+// Connection state management
+pusher.connection.bind("state_change", ({ current }) => {
+  console.log("Connection state:", current);
+});</code></pre>
+                </div>
+
+                <div id="client-react" class="code-block">
+                    <pre><code class="language-javascript">import { useEffect, useState } from "react";
+import Pusher from "pusher-js";
+
+function useChannel(channelName) {
+  const [messages, setMessages] = useState([]);
+
+  useEffect(() => {
+    const pusher = new Pusher("app-key", {
+      wsHost: "your-server.com",
+      wsPort: 6001,
+      forceTLS: false,
+      disableStats: true,
+      enabledTransports: ["ws", "wss"],
+      cluster: "mt1",
+    });
+
+    const channel = pusher.subscribe(channelName);
+
+    channel.bind("order-placed", (data) => {
+      setMessages((prev) => [...prev, data]);
+    });
+
+    return () => {
+      channel.unbind_all();
+      pusher.unsubscribe(channelName);
+      pusher.disconnect();
+    };
+  }, [channelName]);
+
+  return messages;
+}
+
+// Usage in a component
+function OrderNotifications() {
+  const orders = useChannel("notifications");
+
+  return (
+    &lt;div&gt;
+      {orders.map((order, i) =&gt; (
+        &lt;div key={i}&gt;Order {order.orderId}: {order.message}&lt;/div&gt;
+      ))}
+    &lt;/div&gt;
+  );
+}</code></pre>
+                </div>
+
+                <div id="client-vue" class="code-block">
+                    <pre><code class="language-javascript">// composables/usePusher.js
+import { ref, onMounted, onUnmounted } from "vue";
+import Pusher from "pusher-js";
+
+export function usePusher(channelName, eventName) {
+  const messages = ref([]);
+  let pusher, channel;
+
+  onMounted(() => {
+    pusher = new Pusher("app-key", {
+      wsHost: "your-server.com",
+      wsPort: 6001,
+      forceTLS: false,
+      disableStats: true,
+      enabledTransports: ["ws", "wss"],
+      cluster: "mt1",
+    });
+
+    channel = pusher.subscribe(channelName);
+    channel.bind(eventName, (data) => {
+      messages.value.push(data);
+    });
+  });
+
+  onUnmounted(() => {
+    channel?.unbind_all();
+    pusher?.unsubscribe(channelName);
+    pusher?.disconnect();
+  });
+
+  return { messages };
+}
+
+// In your component:
+// &lt;script setup&gt;
+// const { messages } = usePusher("notifications", "order-placed");
+// &lt;/script&gt;</code></pre>
+                </div>
+            </div>
+
+            <!-- Migration note -->
+            <div class="mt-12 p-8 bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-xl border border-purple-500/20">
+                <div class="flex items-start gap-4">
+                    <div class="flex-shrink-0 w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold mb-2">Migrating from Pusher?</h4>
+                        <p class="text-muted-foreground text-sm leading-relaxed">
+                            It's as simple as changing your connection config. Replace <code class="bg-secondary/80 px-1.5 py-0.5 rounded text-xs">host: "api-xx.pusher.com"</code> with your Soketi Manager host.
+                            All your existing channel subscriptions, event bindings, and broadcasting logic will work without any changes.
+                            Soketi implements the full Pusher protocol &mdash; channels, presence, private channels, client events, and webhooks are all supported.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===================== ARCHITECTURE ===================== -->
+    <section class="py-20 px-4 sm:px-6 lg:px-8 bg-secondary/10">
+        <div class="max-w-5xl mx-auto">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold mb-4">How It Works</h2>
+                <p class="text-muted-foreground text-lg max-w-2xl mx-auto">
+                    Everything runs inside a single Docker container for maximum simplicity
+                </p>
+            </div>
+
+            <div class="bg-secondary/30 rounded-2xl border border-border p-8 sm:p-12">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
+                    <!-- Your App -->
+                    <div class="text-center">
+                        <div class="w-16 h-16 mx-auto rounded-xl bg-blue-500/15 flex items-center justify-center mb-3">
+                            <svg class="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                        </div>
+                        <h4 class="font-semibold mb-1">Your Application</h4>
+                        <p class="text-xs text-muted-foreground">Node.js / PHP / Python<br>Using Pusher SDK</p>
+                    </div>
+
+                    <!-- Arrow -->
+                    <div class="hidden md:flex items-center justify-center">
+                        <div class="flex flex-col items-center gap-2">
+                            <svg class="w-8 h-8 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                            <span class="text-xs text-muted-foreground">Pusher Protocol</span>
+                        </div>
+                    </div>
+                    <div class="flex md:hidden items-center justify-center py-2">
+                        <svg class="w-8 h-8 text-muted-foreground rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                    </div>
+
+                    <!-- Docker Container -->
+                    <div class="bg-background/50 rounded-xl border border-border p-6">
+                        <div class="text-center mb-4">
+                            <span class="text-xs font-mono text-muted-foreground bg-secondary/50 px-2 py-1 rounded">Docker Container</span>
+                        </div>
+                        <div class="space-y-3">
+                            <div class="bg-purple-500/10 rounded-lg p-3 border border-purple-500/20 text-center">
+                                <p class="text-sm font-semibold text-purple-300">App Manager</p>
+                                <p class="text-xs text-muted-foreground">:3000 &middot; Web UI + REST API</p>
+                            </div>
+                            <div class="bg-blue-500/10 rounded-lg p-3 border border-blue-500/20 text-center">
+                                <p class="text-sm font-semibold text-blue-300">Soketi Server</p>
+                                <p class="text-xs text-muted-foreground">:6001 &middot; WebSocket + HTTP</p>
+                            </div>
+                            <div class="bg-secondary/50 rounded-lg p-2 text-center">
+                                <p class="text-xs text-muted-foreground font-mono">soketi.json</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===================== QUICK START ===================== -->
+    <section id="quickstart" class="py-20 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-4xl mx-auto">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl font-bold mb-4">Quick Start</h2>
+                <p class="text-muted-foreground text-lg">
+                    Get up and running in under 2 minutes
+                </p>
+            </div>
+
+            <div class="space-y-8">
+                <div class="flex gap-6">
+                    <div class="flex-shrink-0"><div class="flex items-center justify-center h-12 w-12 rounded-lg bg-primary text-primary-foreground font-bold">1</div></div>
+                    <div class="flex-1">
+                        <h3 class="text-xl font-semibold mb-2">Pull the Image</h3>
+                        <p class="text-muted-foreground mb-3">Get the latest pre-built Docker image from GitHub Container Registry.</p>
+                        <div class="bg-secondary/50 rounded-lg p-4 border border-border">
+                            <code class="text-sm font-mono">docker pull ghcr.io/almossaidllc/soketi-manager:latest</code>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-6">
+                    <div class="flex-shrink-0"><div class="flex items-center justify-center h-12 w-12 rounded-lg bg-primary text-primary-foreground font-bold">2</div></div>
+                    <div class="flex-1">
+                        <h3 class="text-xl font-semibold mb-2">Run the Container</h3>
+                        <p class="text-muted-foreground mb-3">Start with a single command. Config auto-initializes.</p>
+                        <div class="bg-secondary/50 rounded-lg p-4 border border-border overflow-x-auto">
+                            <code class="text-sm font-mono block whitespace-pre-wrap">docker run -d \
+  --name soketi-app-manager \
+  -p 3000:3000 \
+  -p 6001:6001 \
+  ghcr.io/almossaidllc/soketi-manager:latest</code>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-6">
+                    <div class="flex-shrink-0"><div class="flex items-center justify-center h-12 w-12 rounded-lg bg-primary text-primary-foreground font-bold">3</div></div>
+                    <div class="flex-1">
+                        <h3 class="text-xl font-semibold mb-2">Create Your First App</h3>
+                        <p class="text-muted-foreground mb-3">Open the Manager UI, click "Create App", and you're ready to go.</p>
+                        <div class="flex flex-wrap gap-3">
+                            <a href="http://localhost:3000" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 btn-primary px-6 py-2 rounded-lg text-primary-foreground font-medium text-sm">
+                                Open Manager
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                            </a>
+                            <a href="http://localhost:3000/playground.html" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-6 py-2 rounded-lg border border-border hover:bg-secondary/50 font-medium text-sm transition">
+                                Open Playground
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Persist Config -->
+            <div class="mt-12 p-8 bg-secondary/50 rounded-xl border border-border">
+                <h3 class="text-lg font-semibold mb-4">Need to Persist Config?</h3>
+                <p class="text-muted-foreground mb-4 text-sm">Use a Docker volume to keep your configuration across container restarts:</p>
+                <div class="bg-background rounded-lg p-4 border border-border overflow-x-auto">
+                    <code class="text-sm font-mono block whitespace-pre-wrap">docker run -d \
+  --name soketi-app-manager \
+  -p 3000:3000 \
+  -p 6001:6001 \
+  -v soketi-config:/app/config:rw \
+  -e SOKETI_CONFIG_FILE=/app/config/soketi.json \
+  ghcr.io/almossaidllc/soketi-manager:latest</code>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===================== CTA ===================== -->
+    <section class="py-20 px-4 sm:px-6 lg:px-8 bg-secondary/20">
+        <div class="max-w-4xl mx-auto text-center">
+            <h2 class="text-4xl font-bold mb-4">Stop Paying for WebSockets</h2>
+            <p class="text-muted-foreground text-lg mb-8 max-w-2xl mx-auto">
+                Deploy your own Pusher-compatible WebSocket infrastructure in minutes. Open source, self-hosted, unlimited everything.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="#quickstart" class="btn-primary px-8 py-3.5 rounded-xl text-primary-foreground font-semibold inline-flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    Deploy Now
+                </a>
+                <a href="https://github.com/AlmossaidLLC/soketi-manager" target="_blank" class="px-8 py-3.5 rounded-xl border-2 border-border hover:border-foreground/30 hover:bg-secondary/50 font-semibold inline-flex items-center justify-center gap-2 transition">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                    View on GitHub
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===================== FOOTER ===================== -->
+    <footer class="border-t border-border py-12 px-4 sm:px-6 lg:px-8 bg-secondary/30">
+        <div class="max-w-7xl mx-auto">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+                <div>
+                    <h3 class="font-semibold mb-4 flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                        Soketi Manager
+                    </h3>
+                    <p class="text-muted-foreground text-sm">
+                        Open-source, self-hosted Pusher alternative with multi-app management.
+                    </p>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4">Product</h4>
+                    <ul class="space-y-2 text-sm text-muted-foreground">
+                        <li><a href="#features" class="hover:text-foreground transition">Features</a></li>
+                        <li><a href="#why-switch" class="hover:text-foreground transition">Why Switch</a></li>
+                        <li><a href="#code" class="hover:text-foreground transition">Code Examples</a></li>
+                        <li><a href="#quickstart" class="hover:text-foreground transition">Quick Start</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4">Resources</h4>
+                    <ul class="space-y-2 text-sm text-muted-foreground">
+                        <li><a href="https://soketi.app/" target="_blank" rel="noopener noreferrer" class="hover:text-foreground transition">Soketi Docs</a></li>
+                        <li><a href="https://github.com/AlmossaidLLC/soketi-manager" target="_blank" rel="noopener noreferrer" class="hover:text-foreground transition">GitHub Repository</a></li>
+                        <li><a href="https://github.com/orgs/AlmossaidLLC/packages/container/package/soketi-manager" target="_blank" rel="noopener noreferrer" class="hover:text-foreground transition">Docker Image</a></li>
+                        <li><a href="https://github.com/AlmossaidLLC" target="_blank" rel="noopener noreferrer" class="hover:text-foreground transition">AlmossaidLLC</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4">Compatibility</h4>
+                    <ul class="space-y-2 text-sm text-muted-foreground">
+                        <li>Pusher SDKs (all languages)</li>
+                        <li>Laravel Broadcasting</li>
+                        <li>Laravel Echo</li>
+                        <li>Any Pusher-compatible client</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="border-t border-border pt-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
+                <p>&copy; 2024 AlmossaidLLC. Open source under the ISC License.</p>
+                <div class="flex items-center gap-4">
+                    <a href="https://github.com/AlmossaidLLC/soketi-manager" target="_blank" rel="noopener noreferrer" class="hover:text-foreground transition flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                        GitHub
+                    </a>
+                    <span>&middot;</span>
+                    <span>Made with &#10084; by <a href="https://github.com/AbdelilahEzzouini" target="_blank" class="hover:text-foreground transition">Abdelilah EZZOUINI</a></span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Tab switching for code blocks
+        document.querySelectorAll('.code-tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                const target = this.dataset.target;
+                const parent = this.closest('div').parentElement;
+
+                // Deactivate sibling tabs
+                this.parentElement.querySelectorAll('.code-tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+
+                // Show/hide code blocks
+                parent.querySelectorAll('.code-block').forEach(block => {
+                    block.classList.toggle('active', block.id === target);
+                });
+
+                // Re-highlight
+                parent.querySelectorAll('.code-block.active pre code').forEach(el => {
+                    hljs.highlightElement(el);
+                });
+            });
+        });
+
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                const href = this.getAttribute('href');
+                if (href !== '#' && document.querySelector(href)) {
+                    e.preventDefault();
+                    document.querySelector(href).scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+
+        // Nav shadow on scroll
+        window.addEventListener('scroll', () => {
+            const nav = document.querySelector('nav');
+            nav.classList.toggle('shadow-lg', window.scrollY > 50);
+        });
+
+        // Mobile menu toggle
+        document.getElementById('mobileMenuBtn')?.addEventListener('click', () => {
+            document.getElementById('mobileMenu')?.classList.toggle('hidden');
+        });
+
+        // Initialize syntax highlighting
+        hljs.highlightAll();
+    </script>
+</body>
+</html>
